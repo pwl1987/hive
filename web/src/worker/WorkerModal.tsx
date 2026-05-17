@@ -7,7 +7,7 @@ import { Tooltip } from '../ui/Tooltip.js'
 import { CliAgentAvatar } from './CliAgentAvatar.js'
 import { getRolePresentation } from './role-presentation.js'
 import { useWorkerModalResize, WORKER_MODAL_MIN } from './useWorkerModalResize.js'
-import { presentWorkerStatus } from './worker-status.js'
+import { presentWorkerRuntimeStatus } from './worker-status.js'
 
 type WorkerModalProps = {
   onClose: () => void
@@ -34,8 +34,8 @@ export const WorkerModal = ({
 }: WorkerModalProps) => {
   const { t } = useI18n()
   const role = getRolePresentation(worker.role)
-  const status = presentWorkerStatus(worker)
   const ptyRunning = !!runId
+  const status = presentWorkerRuntimeStatus(ptyRunning)
   const resize = useWorkerModalResize()
 
   const handleOpenChange = (open: boolean) => {
@@ -54,6 +54,7 @@ export const WorkerModal = ({
             data-testid="worker-modal"
             aria-label={t('worker.detail', { name: worker.name })}
             className="dialog-scale-pop pointer-events-auto relative flex h-screen max-h-screen max-w-full flex-col overflow-hidden"
+            onEscapeKeyDown={(event) => event.preventDefault()}
             style={{
               background: 'var(--bg-1)',
               width: `${resize.width}px`,
@@ -107,7 +108,7 @@ export const WorkerModal = ({
               className="relative flex min-h-0 flex-1 flex-col p-3"
               data-testid="worker-modal-terminal-slot"
             >
-              <Tooltip label={`${t('common.close')} (Esc)`}>
+              <Tooltip label={t('common.close')}>
                 <Dialog.Close asChild>
                   <button
                     type="button"

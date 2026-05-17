@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import type { TeamListItem } from '../../src/shared/types.js'
@@ -8,6 +8,7 @@ import { WorkerModal } from '../../web/src/worker/WorkerModal.js'
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -65,6 +66,34 @@ describe('WorkerModal — pure PTY view (control actions live on WorkerCard)', (
     const { onClose } = renderModal()
     fireEvent.click(screen.getByLabelText('Close worker detail'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test('Escape inside the terminal modal is reserved for the terminal instead of dialog close', () => {
+    const { onClose } = renderModal({ runId: 'run-1' })
+
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      code: 'Escape',
+      key: 'Escape',
+    })
+    screen.getByRole('dialog', { name: 'Alice' }).dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  test('Close tooltip does not advertise Escape as a worker-modal shortcut', () => {
+    vi.useFakeTimers()
+    renderModal({ runId: 'run-1' })
+
+    fireEvent.focus(screen.getByLabelText('Close worker detail'))
+    act(() => vi.advanceTimersByTime(300))
+
+    expect(screen.getAllByText('Close').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Close (Esc)')).toBeNull()
+
+    vi.useRealTimers()
   })
 
   test('startError surfaces as an alert banner', () => {

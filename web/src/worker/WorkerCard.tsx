@@ -5,7 +5,11 @@ import type { TeamListItem } from '../../../src/shared/types.js'
 import { useI18n } from '../i18n.js'
 import { Tooltip } from '../ui/Tooltip.js'
 import { CliAgentAvatar } from './CliAgentAvatar.js'
-import { presentWorkerStatus, type WorkerStatusKind } from './worker-status.js'
+import {
+  presentWorkerRuntimeStatus,
+  type WorkerRuntimeStatusKind,
+  type WorkerStatusKind,
+} from './worker-status.js'
 
 const pillToneByStatus: Record<WorkerStatusKind, string> = {
   working: 'pill--green',
@@ -14,8 +18,8 @@ const pillToneByStatus: Record<WorkerStatusKind, string> = {
 }
 const roleKey = (role: TeamListItem['role']) =>
   `role.${role}` as 'role.coder' | 'role.custom' | 'role.reviewer' | 'role.tester'
-const statusKey = (status: WorkerStatusKind) =>
-  `common.${status}` as 'common.idle' | 'common.stopped' | 'common.working'
+const statusKey = (status: WorkerRuntimeStatusKind) =>
+  status === 'working' ? 'common.running' : 'common.stopped'
 
 export type WorkerCardActionKind = 'start' | 'rename' | 'delete'
 
@@ -41,7 +45,7 @@ export const WorkerCard = ({
   worker,
 }: WorkerCardProps) => {
   const { t } = useI18n()
-  const status = presentWorkerStatus(worker)
+  const status = presentWorkerRuntimeStatus(hasRun)
 
   const handleAction =
     (kind: WorkerCardActionKind): ((event: ReactMouseEvent<HTMLButtonElement>) => void) =>
