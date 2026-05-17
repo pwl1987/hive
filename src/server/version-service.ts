@@ -44,7 +44,7 @@ export const compareVersions = (left: string, right: string) => {
 
 const buildVersionInfo = (currentVersion: string, latestVersion: string): VersionInfoPayload => ({
   current_version: currentVersion,
-  install_hint: `npm update -g ${PACKAGE_NAME}`,
+  install_hint: `npm install -g ${PACKAGE_NAME}@latest`,
   latest_version: latestVersion,
   package_name: PACKAGE_NAME,
   release_url: `https://www.npmjs.com/package/${PACKAGE_NAME}/v/${latestVersion}`,

@@ -2,6 +2,14 @@
 
 All notable user-facing changes will be documented in this file.
 
+## 1.1.4 - 2026-05-17
+
+Update guidance polish.
+
+- Shows `npm install -g @tt-a1i/hive@latest` in update prompts instead of
+  `npm update -g @tt-a1i/hive`, making the upgrade command explicit and
+  deterministic across npm versions.
+
 ## 1.1.3 - 2026-05-17
 
 Brand polish.

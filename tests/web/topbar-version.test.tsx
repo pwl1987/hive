@@ -17,7 +17,7 @@ describe('Topbar version update hint', () => {
         version="0.6.0-alpha.3"
         versionInfo={{
           currentVersion: '0.6.0-alpha.3',
-          installHint: 'npm update -g @tt-a1i/hive',
+          installHint: 'npm install -g @tt-a1i/hive@latest',
           latestVersion: '0.6.0-alpha.4',
           packageName: '@tt-a1i/hive',
           releaseUrl: 'https://www.npmjs.com/package/@tt-a1i/hive/v/0.6.0-alpha.4',
@@ -29,6 +29,6 @@ describe('Topbar version update hint', () => {
     expect(screen.getByTestId('topbar-logo')).toHaveAttribute('src', '/logo.png')
     expect(screen.getByTestId('topbar-update-badge')).toHaveTextContent('Update available')
     expect(screen.getByText('v0.6.0-alpha.3 → v0.6.0-alpha.4')).toBeInTheDocument()
-    expect(screen.getByText('npm update -g @tt-a1i/hive')).toBeInTheDocument()
+    expect(screen.getByText('npm install -g @tt-a1i/hive@latest')).toBeInTheDocument()
   })
 })

@@ -10,7 +10,7 @@ import { WelcomePane } from '../../web/src/worker/WelcomePane.js'
 
 const versionInfo = {
   currentVersion: '0.6.0-alpha.5',
-  installHint: 'npm update -g @tt-a1i/hive',
+  installHint: 'npm install -g @tt-a1i/hive@latest',
   latestVersion: '0.6.0-alpha.5',
   packageName: '@tt-a1i/hive',
   releaseUrl: 'https://www.npmjs.com/package/@tt-a1i/hive',

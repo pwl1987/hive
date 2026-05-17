@@ -48,7 +48,7 @@ const startServerWithVersionInfo = async () => {
     versionService: {
       getVersionInfo: async () => ({
         current_version: '0.6.0-alpha.3',
-        install_hint: 'npm update -g @tt-a1i/hive',
+        install_hint: 'npm install -g @tt-a1i/hive@latest',
         latest_version: '0.6.0-alpha.4',
         package_name: '@tt-a1i/hive',
         release_url: 'https://www.npmjs.com/package/@tt-a1i/hive/v/0.6.0-alpha.4',
@@ -113,7 +113,7 @@ describe('runtime http app', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       current_version: '0.6.0-alpha.3',
-      install_hint: 'npm update -g @tt-a1i/hive',
+      install_hint: 'npm install -g @tt-a1i/hive@latest',
       latest_version: '0.6.0-alpha.4',
       package_name: '@tt-a1i/hive',
       release_url: 'https://www.npmjs.com/package/@tt-a1i/hive/v/0.6.0-alpha.4',
