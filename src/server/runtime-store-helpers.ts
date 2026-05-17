@@ -15,6 +15,7 @@ import { createTasksFileWatcher } from './tasks-file-watcher.js'
 import { createTeamOperations } from './team-operations.js'
 import { createUiAuth } from './ui-auth.js'
 import { createWorkerOutputTracker, type WorkerOutputTracker } from './worker-output-tracker.js'
+import { createWorkspaceShellRuntime } from './workspace-shell-runtime.js'
 import { createWorkspaceStore } from './workspace-store.js'
 
 export interface RuntimeStoreServices {
@@ -24,6 +25,7 @@ export interface RuntimeStoreServices {
   dispatchLedgerStore: ReturnType<typeof createDispatchLedgerStore>
   messageLogStore: ReturnType<typeof createMessageLogStore>
   settings: ReturnType<typeof createSettingsStore>
+  shellRuntime: ReturnType<typeof createWorkspaceShellRuntime>
   tasksFileWatcher: ReturnType<typeof createTasksFileWatcher>
   tasksFileWatchCallbacks: Set<(workspaceId: string, content: string) => void>
   tasksFileService: ReturnType<typeof createTasksFileService>
@@ -70,6 +72,7 @@ export const createRuntimeStoreServices = (
     },
   })
   const uiAuth = createUiAuth()
+  const shellRuntime = createWorkspaceShellRuntime(options.agentManager)
 
   agentRunStore.markUnfinishedRunsStale()
 
@@ -121,6 +124,7 @@ export const createRuntimeStoreServices = (
     dispatchLedgerStore,
     messageLogStore,
     settings,
+    shellRuntime,
     tasksFileWatcher,
     tasksFileWatchCallbacks,
     tasksFileService,
@@ -197,6 +201,7 @@ export const createRuntimeStoreLifecycle = ({
 
   return {
     close: async () => {
+      services.shellRuntime.close()
       await services.agentRuntime.close()
       await services.tasksFileWatcher.close()
       services.workerOutputTracker?.closeAll()
@@ -209,19 +214,32 @@ export const createRuntimeStoreLifecycle = ({
     },
     peekAgentLaunchConfig: (workspaceId: string, agentId: string) =>
       services.agentRuntime.peekAgentLaunchConfig(workspaceId, agentId),
+    deleteWorkspaceShell: (workspaceId: string) => {
+      services.shellRuntime.deleteWorkspace(workspaceId)
+    },
+    closeWorkspaceShell: (workspaceId: string, runId: string) =>
+      services.shellRuntime.closeRun(workspaceId, runId),
+    getLiveRun: (runId: string) =>
+      services.shellRuntime.getLiveRun(runId) ?? services.agentRuntime.getLiveRun(runId),
     getPtyOutputBus: (): PtyOutputBus => {
       if (!agentManager) throw new Error('Agent manager is required for PTY output subscriptions')
       return agentManager.getOutputBus()
     },
-    listTerminalRuns: (workspaceId: string) =>
-      services.workspaceStore.getWorkspaceSnapshot(workspaceId).agents.flatMap((agent) => {
+    listTerminalRuns: (workspaceId: string) => [
+      ...services.workspaceStore.getWorkspaceSnapshot(workspaceId).agents.flatMap((agent) => {
         const run = services.agentRuntime.getActiveRunByAgentId(workspaceId, agent.id)
         if (!run) return []
         return [
           { agent_id: agent.id, agent_name: agent.name, run_id: run.runId, status: run.status },
         ]
       }),
+      ...services.shellRuntime.listTerminalRuns(workspaceId),
+    ],
     startAgent,
+    startWorkspaceShell: (workspaceId: string) =>
+      services.shellRuntime.start(
+        services.workspaceStore.getWorkspaceSnapshot(workspaceId).summary
+      ),
     autostartConfiguredAgents,
     registerTasksListener: (listener: (workspaceId: string, content: string) => void) => {
       services.tasksFileWatchCallbacks.add(listener)
@@ -235,7 +253,27 @@ export const createRuntimeStoreLifecycle = ({
     },
     writeRunInput: (runId: string, text: string) => {
       if (!agentManager) throw new Error('Agent manager is required for PTY stdin writes')
+      if (services.shellRuntime.hasRun(runId)) {
+        services.shellRuntime.writeInput(runId, text)
+        return
+      }
       agentManager.writeInput(runId, text)
+    },
+    pauseTerminalRun: (runId: string) => {
+      if (services.shellRuntime.hasRun(runId)) services.shellRuntime.pauseRun(runId)
+      else services.agentRuntime.pauseRun(runId)
+    },
+    resizeTerminalRun: (runId: string, cols: number, rows: number) => {
+      if (services.shellRuntime.hasRun(runId)) services.shellRuntime.resizeRun(runId, cols, rows)
+      else services.agentRuntime.resizeAgentRun(runId, cols, rows)
+    },
+    resumeTerminalRun: (runId: string) => {
+      if (services.shellRuntime.hasRun(runId)) services.shellRuntime.resumeRun(runId)
+      else services.agentRuntime.resumeRun(runId)
+    },
+    stopTerminalRun: (runId: string) => {
+      if (services.shellRuntime.hasRun(runId)) services.shellRuntime.stopRun(runId)
+      else services.agentRuntime.stopAgentRun(runId)
     },
   }
 }

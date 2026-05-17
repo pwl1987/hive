@@ -194,7 +194,7 @@ describe('worker flow with real server', () => {
     expect(card).toBeInTheDocument()
     expect(within(card).getByText('Alice')).toBeInTheDocument()
     expect(within(card).getByText('Coder')).toBeInTheDocument()
-    expect(within(card).getByText('running')).toBeInTheDocument()
+    expect(within(card).getByRole('status')).toHaveTextContent('idle')
     // Add Member affordance now lives only in the WorkersPane header (the
     // dashed in-grid Add Member tile was redundant and visually misleading).
     expect(screen.getByTestId('add-worker-trigger')).toHaveTextContent('Add Member')

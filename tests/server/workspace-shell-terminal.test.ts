@@ -1,0 +1,143 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
+
+import { afterEach, describe, expect, test } from 'vitest'
+import WebSocket from 'ws'
+
+import { getWorkspaceShellAgentId } from '../../src/server/workspace-shell-runtime.js'
+import { startTestServer } from '../helpers/test-server.js'
+import { getUiCookie } from '../helpers/ui-session.js'
+
+const tempDirs: string[] = []
+
+const waitFor = async (
+  assertion: () => void | Promise<void>,
+  timeoutMs = 5000,
+  intervalMs = 25
+) => {
+  const deadline = Date.now() + timeoutMs
+  let lastError: unknown
+
+  while (Date.now() <= deadline) {
+    try {
+      await assertion()
+      return
+    } catch (error) {
+      lastError = error
+      await new Promise((resolve) => setTimeout(resolve, intervalMs))
+    }
+  }
+
+  throw lastError
+}
+
+const toWsUrl = (baseUrl: string, suffix: string) => baseUrl.replace('http://', 'ws://') + suffix
+
+const openSocket = async (url: string, cookie: string) =>
+  await new Promise<WebSocket>((resolve, reject) => {
+    const socket = new WebSocket(url, { headers: { cookie } })
+    socket.once('open', () => resolve(socket))
+    socket.once('error', reject)
+  })
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { force: true, recursive: true })
+})
+
+describe('workspace shell terminal', () => {
+  test('starts one workspace shell and wires it through the terminal websocket', async () => {
+    const workspacePath = mkdtempSync(join(tmpdir(), 'hive-shell-terminal-'))
+    tempDirs.push(workspacePath)
+    const server = await startTestServer()
+
+    try {
+      const cookie = await getUiCookie(server.baseUrl)
+      const workspaceResponse = await fetch(`${server.baseUrl}/api/workspaces`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({
+          autostart_orchestrator: false,
+          name: 'Shell',
+          path: workspacePath,
+        }),
+      })
+      expect(workspaceResponse.status).toBe(201)
+      const workspace = (await workspaceResponse.json()) as { id: string }
+
+      const startResponse = await fetch(
+        `${server.baseUrl}/api/workspaces/${workspace.id}/shell/start`,
+        { method: 'POST', headers: { cookie } }
+      )
+      expect(startResponse.status).toBe(201)
+      const shell = (await startResponse.json()) as {
+        agent_id: string
+        agent_name: string
+        run_id: string
+        status: string
+      }
+      expect(shell).toMatchObject({
+        agent_id: getWorkspaceShellAgentId(workspace.id),
+        agent_name: 'Shell 1',
+        run_id: expect.any(String),
+      })
+
+      const secondStart = await fetch(
+        `${server.baseUrl}/api/workspaces/${workspace.id}/shell/start`,
+        { method: 'POST', headers: { cookie } }
+      )
+      expect(secondStart.status).toBe(201)
+      const secondShell = (await secondStart.json()) as {
+        agent_id: string
+        agent_name: string
+        run_id: string
+        status: string
+      }
+      expect(secondShell.run_id).not.toBe(shell.run_id)
+      expect(secondShell.agent_name).toBe('Shell 2')
+
+      const runsResponse = await fetch(`${server.baseUrl}/api/ui/workspaces/${workspace.id}/runs`, {
+        headers: { cookie },
+      })
+      expect(runsResponse.status).toBe(200)
+      const runs = (await runsResponse.json()) as Array<{ agent_name: string; run_id: string }>
+      expect(runs).toContainEqual(expect.objectContaining({ run_id: shell.run_id }))
+      expect(runs).toContainEqual(expect.objectContaining({ run_id: secondShell.run_id }))
+      expect(runs.map((run) => run.agent_name)).toEqual(
+        expect.arrayContaining(['Shell 1', 'Shell 2'])
+      )
+
+      const closeResponse = await fetch(
+        `${server.baseUrl}/api/workspaces/${workspace.id}/shell/${shell.run_id}`,
+        { method: 'DELETE', headers: { cookie } }
+      )
+      expect(closeResponse.status).toBe(204)
+
+      const afterCloseResponse = await fetch(
+        `${server.baseUrl}/api/ui/workspaces/${workspace.id}/runs`,
+        { headers: { cookie } }
+      )
+      expect(afterCloseResponse.status).toBe(200)
+      const afterCloseRuns = (await afterCloseResponse.json()) as Array<{ run_id: string }>
+      expect(afterCloseRuns).not.toContainEqual(expect.objectContaining({ run_id: shell.run_id }))
+      expect(afterCloseRuns).toContainEqual(expect.objectContaining({ run_id: secondShell.run_id }))
+
+      const io = await openSocket(
+        toWsUrl(server.baseUrl, `/ws/terminal/${secondShell.run_id}/io`),
+        cookie
+      )
+      const received: string[] = []
+      io.on('message', (chunk) => received.push(chunk.toString()))
+      io.send(process.platform === 'win32' ? 'cd\r' : 'pwd\r')
+
+      await waitFor(() => {
+        const output = received.join('').toLowerCase()
+        expect(output).toContain(basename(workspacePath).toLowerCase())
+      })
+
+      io.close()
+    } finally {
+      await server.close()
+    }
+  }, 60000)
+})

@@ -1,6 +1,7 @@
 import { getRequiredParam, readJsonBody, route, sendJson } from './route-helpers.js'
 import type { ConfigureAgentLaunchBody, RouteDefinition } from './route-types.js'
 import { requireUiTokenFromRequest } from './ui-auth-helpers.js'
+import { getWorkspaceShellAgentId } from './workspace-shell-runtime.js'
 
 export const runtimeRoutes: RouteDefinition[] = [
   route('GET', '/api/ui/workspaces/:workspaceId/runs', ({ params, request, response, store }) => {
@@ -18,6 +19,63 @@ export const runtimeRoutes: RouteDefinition[] = [
 
     sendJson(response, 200, store.listTerminalRuns(workspaceId))
   }),
+  route(
+    'POST',
+    '/api/workspaces/:workspaceId/shell/start',
+    async ({ params, request, response, store }) => {
+      const workspaceId = getRequiredParam(
+        response,
+        params,
+        'workspaceId',
+        'Workspace id is required'
+      )
+      if (!workspaceId) {
+        return
+      }
+
+      requireUiTokenFromRequest(request, store.validateUiToken)
+
+      const run = await store.startWorkspaceShell(workspaceId)
+      const summary = store
+        .listTerminalRuns(workspaceId)
+        .find((terminalRun) => terminalRun.run_id === run.runId)
+      sendJson(response, 201, {
+        agent_id: getWorkspaceShellAgentId(workspaceId),
+        agent_name: summary?.agent_name ?? 'Shell',
+        run_id: run.runId,
+        status: run.status,
+      })
+    }
+  ),
+  route(
+    'DELETE',
+    '/api/workspaces/:workspaceId/shell/:runId',
+    ({ params, request, response, store }) => {
+      const workspaceId = getRequiredParam(
+        response,
+        params,
+        'workspaceId',
+        'Workspace id and run id are required'
+      )
+      const runId = getRequiredParam(
+        response,
+        params,
+        'runId',
+        'Workspace id and run id are required'
+      )
+      if (!workspaceId || !runId) {
+        return
+      }
+
+      requireUiTokenFromRequest(request, store.validateUiToken)
+      if (!store.closeWorkspaceShell(workspaceId, runId)) {
+        sendJson(response, 404, { error: 'Shell run not found' })
+        return
+      }
+      response.statusCode = 204
+      response.end()
+    }
+  ),
   route(
     'POST',
     '/api/workspaces/:workspaceId/agents/:agentId/config',

@@ -281,6 +281,33 @@ export interface TerminalRunSummary {
   status: string
 }
 
+export const workspaceShellAgentId = (workspaceId: string): string => `${workspaceId}:shell`
+
+export const isWorkspaceShellRun = (run: TerminalRunSummary, workspaceId: string): boolean =>
+  run.agent_id === workspaceShellAgentId(workspaceId)
+
+export const startWorkspaceShell = async (workspaceId: string): Promise<TerminalRunSummary> => {
+  const response = await apiFetch(`/api/workspaces/${workspaceId}/shell/start`, {
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, 'Failed to start workspace terminal'))
+  }
+
+  return (await response.json()) as TerminalRunSummary
+}
+
+export const closeWorkspaceShell = async (workspaceId: string, runId: string): Promise<void> => {
+  const response = await apiFetch(`/api/workspaces/${workspaceId}/shell/${runId}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, 'Failed to close workspace terminal'))
+  }
+}
+
 export const listRoleTemplates = async (): Promise<RoleTemplate[]> => {
   const response = await apiFetch('/api/settings/role-templates', {
     mode: 'same-origin',

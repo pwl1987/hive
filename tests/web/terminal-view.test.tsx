@@ -82,9 +82,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-const addPortalSlot = (runId: string) => {
+const addPortalSlot = (runId: string, kind: 'orch' | 'shell' | 'worker' = 'orch') => {
   const slot = document.createElement('div')
-  slot.id = `orch-pty-${runId}`
+  slot.id = `${kind}-pty-${runId}`
   document.body.appendChild(slot)
   return slot
 }
@@ -106,6 +106,17 @@ describe('TerminalView', () => {
       expect(urls[1]?.searchParams.get('clientId')).toBe(urls[0]?.searchParams.get('clientId'))
       expect(urls[0]?.searchParams.get('cols')).toBe('132')
       expect(urls[0]?.searchParams.get('rows')).toBe('43')
+    })
+  })
+
+  test('mounts into a workspace shell portal slot', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    const slot = addPortalSlot('run-shell', 'shell')
+
+    render(<TerminalView runId="run-shell" title="Shell" />)
+
+    await waitFor(() => {
+      expect(slot.querySelector('[data-testid="terminal-run-shell"]')).not.toBeNull()
     })
   })
 

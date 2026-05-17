@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
 
 import type { TeamListItem, WorkspaceSummary } from '../../src/shared/types.js'
-import { type OrchestratorStartResult, renameWorker, type TerminalRunSummary } from './api.js'
+import {
+  closeWorkspaceShell,
+  isWorkspaceShellRun,
+  type OrchestratorStartResult,
+  renameWorker,
+  startWorkspaceShell,
+  type TerminalRunSummary,
+} from './api.js'
 import { useI18n } from './i18n.js'
 import { WorkspaceNotifications } from './notifications/WorkspaceNotifications.js'
 import { findRunByAgentId } from './terminal/useTerminalRuns.js'
+import { WorkspaceShellDialog } from './terminal/WorkspaceShellDialog.js'
 import { useToast } from './ui/useToast.js'
 import { usePaneSplit } from './usePaneSplit.js'
 import { AddWorkerDialog } from './worker/AddWorkerDialog.js'
@@ -50,6 +58,10 @@ export const WorkspaceDetail = ({
   const [activeWorkerId, setActiveWorkerId] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [deleteWorkerError, setDeleteWorkerError] = useState<string | null>(null)
+  const [shellError, setShellError] = useState<string | null>(null)
+  const [shellOpen, setShellOpen] = useState(false)
+  const [shellRunId, setShellRunId] = useState<string | null>(null)
+  const [shellStarting, setShellStarting] = useState(false)
   const [startWorkerError, setStartWorkerError] = useState<string | null>(null)
   const [startingWorkerId, setStartingWorkerId] = useState<string | null>(null)
   const toast = useToast()
@@ -78,6 +90,10 @@ export const WorkspaceDetail = ({
   // biome-ignore lint/correctness/useExhaustiveDependencies: effect intentionally fires only on workspace switch
   useEffect(() => {
     setDeleteWorkerError(null)
+    setShellError(null)
+    setShellOpen(false)
+    setShellRunId(null)
+    setShellStarting(false)
     setStartWorkerError(null)
     setStartingWorkerId(null)
   }, [workspace?.id])
@@ -107,6 +123,9 @@ export const WorkspaceDetail = ({
   }
 
   const activeWorkerRun = activeWorker ? findRunByAgentId(terminalRuns, activeWorker.id) : undefined
+  const shellRuns = terminalRuns.filter((run) => isWorkspaceShellRun(run, workspace.id))
+  const activeShellRun = shellRuns.find((run) => run.run_id === shellRunId) ?? shellRuns[0] ?? null
+  const activeShellRunId = activeShellRun?.run_id ?? null
 
   const handleDeleteWorker = (worker: TeamListItem) => {
     setDeleteWorkerError(null)
@@ -146,6 +165,32 @@ export const WorkspaceDetail = ({
       toast.show({ kind: 'error', message: t('worker.renameFailed', { message }) })
       return { error: message }
     }
+  }
+
+  const startShell = () => {
+    setShellError(null)
+    setShellStarting(true)
+    void startWorkspaceShell(workspace.id)
+      .then((run) => setShellRunId(run.run_id))
+      .catch((error) => {
+        setShellError(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() => setShellStarting(false))
+  }
+
+  const openShell = () => {
+    setShellOpen(true)
+    if (shellRuns.length === 0 && !shellStarting) startShell()
+    else if (!activeShellRunId) setShellRunId(shellRuns[0]?.run_id ?? null)
+  }
+
+  const closeShellTab = (runId: string) => {
+    const fallbackRun = shellRuns.find((run) => run.run_id !== runId) ?? null
+    if (activeShellRunId === runId) setShellRunId(fallbackRun?.run_id ?? null)
+    void closeWorkspaceShell(workspace.id, runId).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      toast.show({ kind: 'error', message: t('shellTerminal.closeFailed', { message }) })
+    })
   }
 
   const orchWidth = `${(split.orchPct * 100).toFixed(2)}%`
@@ -192,6 +237,7 @@ export const WorkspaceDetail = ({
         <WorkersPane
           onAddWorkerClick={() => setComposerOpen(true)}
           onDeleteWorker={handleDeleteWorker}
+          onOpenShellTerminal={openShell}
           onOpenWorker={(worker) => setActiveWorkerId(worker.id)}
           onRenameWorker={handleRenameWorker}
           onStartWorker={handleStartWorker}
@@ -232,6 +278,18 @@ export const WorkspaceDetail = ({
           workerRole={composer.workerRole}
         />
       ) : null}
+      <WorkspaceShellDialog
+        activeRunId={activeShellRunId}
+        error={shellError}
+        onActiveRunChange={setShellRunId}
+        onClose={() => setShellOpen(false)}
+        onCloseTab={closeShellTab}
+        onNewTab={startShell}
+        open={shellOpen}
+        shellRuns={shellRuns}
+        starting={shellStarting}
+        workspace={workspace}
+      />
     </div>
   )
 }

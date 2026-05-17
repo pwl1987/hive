@@ -137,7 +137,7 @@ describe('team send CLI side effects (R1.3)', () => {
         expect(run?.output).toContain('你的角色：')
         expect(run?.output).toContain('实现登录')
         expect(run?.output).toContain(`dispatch_id: ${dispatch?.id}`)
-        expect(run?.output).toContain(`team report "<完整汇报>" --dispatch ${dispatch?.id}`)
+        expect(run?.output).toContain(`team report "<result>" --dispatch ${dispatch?.id}`)
         // The injected prompt may include the dispatch id so workers can report
         // the exact task, but it must not leak workspace or agent ids.
         const injected = (run?.output ?? '').replace(/^WRK:/gm, '')

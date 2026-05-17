@@ -55,9 +55,11 @@ export const DemoWorkspaceView = ({ onExit }: DemoWorkspaceViewProps) => {
         <WorkersPane
           onAddWorkerClick={() => {}}
           onDeleteWorker={() => {}}
+          onOpenShellTerminal={() => {}}
           onOpenWorker={() => {}}
           onRenameWorker={() => Promise.resolve({ error: null })}
           onStartWorker={() => {}}
+          shellTerminalAvailable={false}
           startingWorkerId={null}
           terminalRuns={[]}
           workers={DEMO_WORKERS}

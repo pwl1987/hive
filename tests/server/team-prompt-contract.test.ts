@@ -76,11 +76,16 @@ describe('team prompt contract', () => {
       const output = run?.output.replace(/\r\n/g, '\n')
       expect(output).toContain('@Orchestrator')
       expect(output).toContain(`你的角色：${worker.description}`)
-      expect(output).toContain(`执行 \`team report "<完整汇报>" --dispatch ${dispatch.id}\``)
+      expect(output).toContain(`执行 \`team report "<result>" --dispatch ${dispatch.id}\``)
       expect(output).toContain(`dispatch_id: ${dispatch.id}`)
       expect(output).not.toContain('--success')
       expect(output).not.toContain('--failed')
-      expect(output?.trimEnd()).toMatch(/实现登录$/)
+      expect(output).toContain('实现登录')
+      // Task body is followed by a <hive-system-reminder> tail carrying the
+      // dispatch_id-bound report syntax — this is what re-anchors the worker
+      // identity after an internal /compact.
+      expect(output).toMatch(/实现登录[\s\S]*<hive-system-reminder>[\s\S]*<\/hive-system-reminder>/)
+      expect(output).toContain(`team report "<result>" --dispatch ${dispatch.id}`)
     })
   })
 

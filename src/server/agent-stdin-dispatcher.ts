@@ -1,6 +1,7 @@
 import type { AgentManager } from './agent-manager.js'
 import type { AgentLaunchConfigInput } from './agent-run-store.js'
 import type { LiveAgentRun } from './agent-runtime-types.js'
+import { buildWorkerReminderTail, ORCHESTRATOR_REMINDER_TAIL } from './hive-team-guidance.js'
 import { PtyInactiveError } from './http-errors.js'
 import type { LiveRunRegistry } from './live-run-registry.js'
 import { createPostStartInputWriter } from './post-start-input-writer.js'
@@ -12,6 +13,55 @@ interface AgentStdinDispatcherInput {
   registry: LiveRunRegistry
   syncRun: (run: LiveAgentRun) => LiveAgentRun
 }
+
+export const buildOrchestratorReportPayload = (
+  workerName: string,
+  text: string,
+  artifacts: string[]
+): string => {
+  const lines: string[] = [`[Hive 系统消息：来自 @${workerName} 的汇报]`, text]
+  for (const artifact of artifacts) lines.push(`artifact: ${artifact}`)
+  lines.push('', ORCHESTRATOR_REMINDER_TAIL, '')
+  return lines.join('\n')
+}
+
+export const buildOrchestratorStatusPayload = (
+  workerName: string,
+  text: string,
+  artifacts: string[]
+): string => {
+  const lines: string[] = [`[Hive 系统消息：来自 @${workerName} 的状态更新]`, text]
+  for (const artifact of artifacts) lines.push(`artifact: ${artifact}`)
+  lines.push('', ORCHESTRATOR_REMINDER_TAIL, '')
+  return lines.join('\n')
+}
+
+export const buildOrchestratorUserInputPayload = (text: string): string =>
+  [text, '', ORCHESTRATOR_REMINDER_TAIL, ''].join('\n')
+
+export const buildWorkerDispatchPayload = (
+  fromAgentName: string,
+  workerDescription: string,
+  dispatchId: string,
+  text: string
+): string =>
+  [
+    `[Hive 系统消息：来自 @${fromAgentName} 的派单]`,
+    '',
+    `你的角色：${workerDescription}`,
+    '',
+    '你必须遵守：',
+    `- 完成、失败、阻塞或部分完成后，执行 \`team report "<result>" --dispatch ${dispatchId}\``,
+    '- 不要做无关的事，做完就 report',
+    '',
+    `dispatch_id: ${dispatchId}`,
+    '',
+    '任务内容：',
+    text,
+    '',
+    buildWorkerReminderTail(dispatchId),
+    '',
+  ].join('\n')
 
 export const createAgentStdinDispatcher = ({
   agentManager,
@@ -64,10 +114,12 @@ export const createAgentStdinDispatcher = ({
       artifacts: string[],
       input: { requireActiveRun?: boolean } = {}
     ) {
-      const lines = [`[Hive 系统消息：来自 @${workerName} 的汇报]`, text]
-      for (const artifact of artifacts) lines.push(`artifact: ${artifact}`)
-      lines.push('')
-      writeToActiveAgentRun(workspaceId, `${workspaceId}:orchestrator`, lines.join('\n'), input)
+      writeToActiveAgentRun(
+        workspaceId,
+        `${workspaceId}:orchestrator`,
+        buildOrchestratorReportPayload(workerName, text, artifacts),
+        input
+      )
     },
     writeStatusPrompt(
       workspaceId: string,
@@ -76,10 +128,12 @@ export const createAgentStdinDispatcher = ({
       artifacts: string[],
       input: { requireActiveRun?: boolean } = {}
     ) {
-      const lines = [`[Hive 系统消息：来自 @${workerName} 的状态更新]`, text]
-      for (const artifact of artifacts) lines.push(`artifact: ${artifact}`)
-      lines.push('')
-      writeToActiveAgentRun(workspaceId, `${workspaceId}:orchestrator`, lines.join('\n'), input)
+      writeToActiveAgentRun(
+        workspaceId,
+        `${workspaceId}:orchestrator`,
+        buildOrchestratorStatusPayload(workerName, text, artifacts),
+        input
+      )
     },
     writeSendPrompt(
       workspaceId: string,
@@ -92,26 +146,16 @@ export const createAgentStdinDispatcher = ({
       writeToActiveAgentRun(
         workspaceId,
         workerId,
-        [
-          `[Hive 系统消息：来自 @${fromAgentName} 的派单]`,
-          '',
-          `你的角色：${workerDescription}`,
-          '',
-          '你必须遵守：',
-          `- 完成、失败、阻塞或部分完成后，执行 \`team report "<完整汇报>" --dispatch ${dispatchId}\``,
-          '- 不要做无关的事，做完就 report',
-          '',
-          `dispatch_id: ${dispatchId}`,
-          '',
-          '任务内容：',
-          text,
-          '',
-        ].join('\n'),
+        buildWorkerDispatchPayload(fromAgentName, workerDescription, dispatchId, text),
         { requireActiveRun: true }
       )
     },
     writeUserInputPrompt(workspaceId: string, text: string) {
-      writeToActiveAgentRun(workspaceId, `${workspaceId}:orchestrator`, `${text}\n`)
+      writeToActiveAgentRun(
+        workspaceId,
+        `${workspaceId}:orchestrator`,
+        buildOrchestratorUserInputPayload(text)
+      )
     },
   }
 }

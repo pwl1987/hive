@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 
 import chokidar, { type FSWatcher } from 'chokidar'
 
-import { ensureTasksFile, getTasksFilePath } from './tasks-file.js'
+import { ensureProtocolFile, ensureTasksFile, getTasksFilePath } from './tasks-file.js'
 
 const DEBOUNCE_MS = 100
 
@@ -53,6 +53,7 @@ export const createTasksFileWatcher = ({
     start: async (workspaceId, workspacePath) => {
       await stop(workspaceId)
       ensureTasksFile(workspacePath)
+      ensureProtocolFile(workspacePath)
       const watcher = chokidar.watch(getTasksFilePath(workspacePath), {
         ignoreInitial: true,
       })
