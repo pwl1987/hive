@@ -52,65 +52,83 @@ export const WorkspaceShellDialog = ({
               height: 'calc(100vh - 32px)',
             }}
           >
-            <Dialog.Title className="sr-only">{t('shellTerminal.title')}</Dialog.Title>
-            <Dialog.Description className="sr-only">
-              {t('shellTerminal.subtitle', { path: workspace.path })}
-            </Dialog.Description>
-
             <div
-              className="flex min-h-9 shrink-0 items-center gap-2 border-b px-2 py-1.5"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-2)' }}
+              className="flex shrink-0 items-center gap-3 border-b px-4 py-3"
+              style={{ borderColor: 'var(--border)' }}
             >
               <div
-                className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
-                role="tablist"
-                aria-label={t('shellTerminal.title')}
+                className="flex h-8 w-8 items-center justify-center rounded border text-sec"
+                style={{ borderColor: 'var(--border-bright)', background: 'var(--bg-2)' }}
               >
-                {shellRuns.map((run) => {
-                  const selected = run.run_id === runId
-                  return (
-                    <div
-                      key={run.run_id}
-                      className="group flex max-w-[220px] shrink-0 items-center rounded border"
-                      style={{
-                        background: selected ? 'var(--bg-3)' : 'transparent',
-                        borderColor: selected ? 'var(--border-bright)' : 'transparent',
-                        color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      }}
+                <Terminal size={16} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Dialog.Title className="truncate text-sm font-medium text-pri">
+                  {t('shellTerminal.title')}
+                </Dialog.Title>
+                <Dialog.Description className="mono truncate text-xs text-ter">
+                  {t('shellTerminal.subtitle', { path: workspace.path })}
+                </Dialog.Description>
+              </div>
+              <Tooltip label={t('common.close')}>
+                <Dialog.Close asChild>
+                  <button type="button" aria-label={t('common.close')} className="float-action">
+                    <X size={14} aria-hidden />
+                  </button>
+                </Dialog.Close>
+              </Tooltip>
+            </div>
+
+            <div
+              className="flex min-h-10 shrink-0 items-center gap-1 border-b px-3 py-1.5"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-2)' }}
+              role="tablist"
+              aria-label={t('shellTerminal.title')}
+            >
+              {shellRuns.map((run) => {
+                const selected = run.run_id === runId
+                return (
+                  <div
+                    key={run.run_id}
+                    className="group flex max-w-[220px] items-center rounded border"
+                    style={{
+                      background: selected ? 'var(--bg-3)' : 'transparent',
+                      borderColor: selected ? 'var(--border-bright)' : 'transparent',
+                      color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => onActiveRunChange(run.run_id)}
+                      className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1 text-xs"
+                      data-testid={`workspace-shell-tab-${run.run_id}`}
                     >
+                      <Terminal size={12} aria-hidden />
+                      <span className="truncate">{run.agent_name}</span>
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-50" />
+                    </button>
+                    <Tooltip label={t('shellTerminal.closeTab', { name: run.agent_name })}>
                       <button
                         type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        onClick={() => onActiveRunChange(run.run_id)}
-                        className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1 text-xs"
-                        data-testid={`workspace-shell-tab-${run.run_id}`}
+                        aria-label={t('shellTerminal.closeTab', { name: run.agent_name })}
+                        className="mr-1 rounded p-0.5 opacity-60 hover:bg-2 hover:opacity-100"
+                        data-testid={`workspace-shell-close-tab-${run.run_id}`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onCloseTab(run.run_id)
+                        }}
                       >
-                        <Terminal size={12} aria-hidden />
-                        <span className="truncate">{run.agent_name}</span>
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-50" />
+                        <X size={12} aria-hidden />
                       </button>
-                      <Tooltip label={t('shellTerminal.closeTab', { name: run.agent_name })}>
-                        <button
-                          type="button"
-                          aria-label={t('shellTerminal.closeTab', { name: run.agent_name })}
-                          className="mr-1 rounded p-0.5 opacity-75 hover:bg-2 hover:opacity-100"
-                          data-testid={`workspace-shell-close-tab-${run.run_id}`}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onCloseTab(run.run_id)
-                          }}
-                        >
-                          <X size={12} aria-hidden />
-                        </button>
-                      </Tooltip>
-                    </div>
-                  )
-                })}
-              </div>
+                    </Tooltip>
+                  </div>
+                )
+              })}
               <button
                 type="button"
-                className="icon-btn icon-btn--tertiary h-7 shrink-0 px-2 text-xs"
+                className="icon-btn icon-btn--tertiary h-7 px-2 text-xs"
                 onClick={onNewTab}
                 disabled={starting}
                 data-testid="workspace-shell-new-tab"
@@ -122,22 +140,6 @@ export const WorkspaceShellDialog = ({
                 )}
                 {t('shellTerminal.newTab')}
               </button>
-              <Tooltip label={t('common.close')}>
-                <Dialog.Close asChild>
-                  <button
-                    type="button"
-                    aria-label={t('common.close')}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-sec transition hover:text-pri"
-                    style={{
-                      background: 'var(--bg-3)',
-                      borderColor: 'var(--border-bright)',
-                      boxShadow: '0 1px 8px color-mix(in oklab, black 20%, transparent)',
-                    }}
-                  >
-                    <X size={14} aria-hidden />
-                  </button>
-                </Dialog.Close>
-              </Tooltip>
             </div>
 
             {error ? (
@@ -155,7 +157,7 @@ export const WorkspaceShellDialog = ({
               </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 p-2">
+            <div className="min-h-0 flex-1 p-3">
               <div
                 className="flex h-full min-h-0 rounded-lg border"
                 style={{ background: 'var(--bg-crust)', borderColor: 'var(--border)' }}
