@@ -9,7 +9,7 @@ import { Confirm } from '../ui/Confirm.js'
 import { EmptyState } from '../ui/EmptyState.js'
 import { RenameWorkerDialog } from './RenameWorkerDialog.js'
 import { WorkerCard, type WorkerCardActionKind } from './WorkerCard.js'
-import { presentWorkerRuntimeStatus, type WorkerRuntimeStatusKind } from './worker-status.js'
+import { presentWorkerStatus, type WorkerStatusKind } from './worker-status.js'
 
 type WorkersPaneProps = {
   onAddWorkerClick: () => void
@@ -22,17 +22,21 @@ type WorkersPaneProps = {
   workers: TeamListItem[]
 }
 
-const SECTION_ORDER: WorkerRuntimeStatusKind[] = ['working', 'stopped']
-const statusKey = (status: WorkerRuntimeStatusKind) =>
-  status === 'working' ? 'common.running' : 'common.stopped'
+const SECTION_ORDER: WorkerStatusKind[] = ['working', 'idle', 'stopped']
+const statusKey = (status: WorkerStatusKind) => {
+  if (status === 'working') return 'common.running'
+  if (status === 'idle') return 'common.idle'
+  return 'common.stopped'
+}
 
-const groupByRuntimeStatus = (workers: TeamListItem[], runningAgentIds: Set<string>) => {
-  const buckets: Record<WorkerRuntimeStatusKind, TeamListItem[]> = {
+const groupByWorkerStatus = (workers: TeamListItem[]) => {
+  const buckets: Record<WorkerStatusKind, TeamListItem[]> = {
+    idle: [],
     working: [],
     stopped: [],
   }
   for (const worker of workers) {
-    buckets[presentWorkerRuntimeStatus(runningAgentIds.has(worker.id)).kind].push(worker)
+    buckets[presentWorkerStatus(worker).kind].push(worker)
   }
   return SECTION_ORDER.filter((kind) => buckets[kind].length > 0).map((kind) => ({
     kind,
@@ -51,20 +55,12 @@ export const WorkersPane = ({
   workers,
 }: WorkersPaneProps) => {
   const { t } = useI18n()
-  const runningAgentIds = useMemo(
-    () => new Set(terminalRuns.map((run) => run.agent_id)),
-    [terminalRuns]
-  )
-  const sections = useMemo(
-    () => groupByRuntimeStatus(workers, runningAgentIds),
-    [runningAgentIds, workers]
-  )
+  const sections = useMemo(() => groupByWorkerStatus(workers), [workers])
   const summary = useMemo(() => {
-    const buckets = { working: 0, stopped: 0 }
-    for (const worker of workers)
-      buckets[presentWorkerRuntimeStatus(runningAgentIds.has(worker.id)).kind]++
+    const buckets = { idle: 0, working: 0, stopped: 0 }
+    for (const worker of workers) buckets[presentWorkerStatus(worker).kind]++
     return buckets
-  }, [runningAgentIds, workers])
+  }, [workers])
   const [pendingDelete, setPendingDelete] = useState<TeamListItem | null>(null)
   const [renameTarget, setRenameTarget] = useState<TeamListItem | null>(null)
   const [renameBusy, setRenameBusy] = useState(false)
@@ -126,6 +122,10 @@ export const WorkersPane = ({
             <span className="inline-flex items-center gap-1.5">
               <span className="status-dot status-dot--working" aria-hidden />
               <span className="text-sec">{summary.working}</span> {t('common.running')}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="status-dot status-dot--idle" aria-hidden />
+              <span className="text-sec">{summary.idle}</span> {t('common.idle')}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="status-dot status-dot--stopped" aria-hidden />

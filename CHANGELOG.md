@@ -130,8 +130,6 @@ Update-awareness pass for public-preview installs.
   version is available.
 - The app topbar surfaces the same update availability and install command in
   the UI.
-- The workspace shell was split into smaller app-level components so future
-  UI changes do not push `web/src/app.tsx` past its size budget.
 
 ## 0.6.0-alpha.3 - 2026-05-14
 

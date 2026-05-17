@@ -31,6 +31,8 @@ const TEAM_USAGE = [
   "  team report --stdin --dispatch <id> <<'EOF'",
   '  ... long report ...',
   '  EOF',
+  '',
+  'For role rules, workflow, and recovery instructions, see .hive/PROTOCOL.md',
 ].join('\n')
 
 const getHiveEnv = (): HiveEnv => {
