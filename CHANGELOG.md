@@ -2,6 +2,13 @@
 
 All notable user-facing changes will be documented in this file.
 
+## 1.1.3 - 2026-05-17
+
+Brand polish.
+
+- Uses the README logo for the browser favicon and the in-app topbar brand mark.
+- Removes the old inline SVG favicon from the web shell.
+
 ## 1.1.2 - 2026-05-17
 
 Private-release workflow fix.
