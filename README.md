@@ -219,6 +219,13 @@ pnpm release:dry
 
 Hive 目前处于 alpha 阶段，核心流程已可用。当前重点是继续打磨多 Agent 协作体验、Windows 支持和更清晰的调度可观测性。欢迎试用、提 issue——反馈会直接影响后续节奏。
 
+## 另一种形态：squad
+
+如果你更喜欢 **纯 CLI、零后台进程、能直接在 SSH 进的远端服务器上跑** 的形态，[squad](https://github.com/mco-org/squad) 是同一个想法的另一条路线——SQLite 当通信层，每个 agent 各自开一个终端。两个项目互不替代，按工作流挑就行：
+
+- **Hive** — 想要可视化工作台、一键重启、侧边栏切 workspace、给团队演示
+- **squad** — 活在 tmux 里、SSH 远端开发、不想跑额外后台进程、Windows server
+
 ## License
 
 Hive 在 Business Source License 1.1 下开源。个人使用、内部部署、嵌入、fork 都可以；详细边界见 [LICENSE.BSL](LICENSE.BSL)。

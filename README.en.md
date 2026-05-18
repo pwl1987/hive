@@ -276,6 +276,16 @@ polishing the multi-agent collaboration workflow, Windows support, and clearer
 orchestration observability. Try it out and open issues — feedback shapes what
 gets prioritized next.
 
+## A different form factor: squad
+
+If you'd rather have **pure CLI, zero background process, and the ability to
+run on a remote SSH box**, [squad](https://github.com/mco-org/squad) takes the
+same idea down a different path — SQLite as the protocol layer, one terminal
+per agent. The two projects don't replace each other; pick by workflow:
+
+- **Hive** — visual workbench, one-click restart, workspace sidebar, easier to demo to a team
+- **squad** — lives in tmux, SSH remote dev, no extra background process, Windows servers
+
 ## License
 
 Hive is open source under the Business Source License 1.1. Personal use, internal deployment, embedding, and forks are permitted — see [LICENSE.BSL](LICENSE.BSL) for the exact boundary.
