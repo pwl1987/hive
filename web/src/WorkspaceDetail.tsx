@@ -73,9 +73,23 @@ export const WorkspaceDetail = ({
   const shellStartRequestSeqRef = useRef(0)
   const shellStartRunByWorkspaceRef = useRef(new Map<string, TerminalRunSummary>())
   const shellStartRunForgetTimersRef = useRef(new Map<string, number>())
+  const closingShellRunIdsByWorkspaceRef = useRef(new Map<string, Set<string>>())
   const selectedWorkspaceIdRef = useRef<string | null>(workspace?.id ?? null)
   const toast = useToast()
   const composer = useWorkerComposer({ createWorker: onCreateWorker, open: composerOpen })
+
+  const markClosingShellRun = useCallback((workspaceId: string, runId: string) => {
+    const ids = closingShellRunIdsByWorkspaceRef.current.get(workspaceId) ?? new Set<string>()
+    ids.add(runId)
+    closingShellRunIdsByWorkspaceRef.current.set(workspaceId, ids)
+  }, [])
+
+  const unmarkClosingShellRun = useCallback((workspaceId: string, runId: string) => {
+    const ids = closingShellRunIdsByWorkspaceRef.current.get(workspaceId)
+    if (!ids) return
+    ids.delete(runId)
+    if (ids.size === 0) closingShellRunIdsByWorkspaceRef.current.delete(workspaceId)
+  }, [])
 
   const forgetRememberedShellRun = useCallback((workspaceId: string) => {
     const timer = shellStartRunForgetTimersRef.current.get(workspaceId)
@@ -131,6 +145,7 @@ export const WorkspaceDetail = ({
       }
       shellStartRunForgetTimersRef.current.clear()
       shellStartRunByWorkspaceRef.current.clear()
+      closingShellRunIdsByWorkspaceRef.current.clear()
     },
     []
   )
@@ -143,6 +158,18 @@ export const WorkspaceDetail = ({
       forgetRememberedShellRun(workspace.id)
     }
   }, [forgetRememberedShellRun, terminalRuns, workspace])
+
+  useEffect(() => {
+    if (!workspace) return
+    const closingIds = closingShellRunIdsByWorkspaceRef.current.get(workspace.id)
+    if (!closingIds) return
+    const liveShellRunIds = new Set(
+      terminalRuns.filter((run) => isWorkspaceShellRun(run, workspace.id)).map((run) => run.run_id)
+    )
+    for (const runId of Array.from(closingIds)) {
+      if (!liveShellRunIds.has(runId)) unmarkClosingShellRun(workspace.id, runId)
+    }
+  }, [terminalRuns, unmarkClosingShellRun, workspace])
 
   // B2: when the user switches workspace, clear local error state so we don't
   // surface a stale error from the previous workspace as a fresh toast.
@@ -271,16 +298,26 @@ export const WorkspaceDetail = ({
       panelTabs.openShellTab(rememberedShellRun.run_id)
       return
     }
+    const closingShellRunIds =
+      closingShellRunIdsByWorkspaceRef.current.get(workspace.id) ?? new Set<string>()
+    const reusableShellRun = shellRuns.find((run) => !closingShellRunIds.has(run.run_id))
+    if (reusableShellRun) {
+      setShellRunId(reusableShellRun.run_id)
+      panelTabs.openShellTab(reusableShellRun.run_id)
+      return
+    }
     startShell()
   }
 
   const closeShellTab = (runId: string) => {
     const fallbackRun = shellRuns.find((run) => run.run_id !== runId) ?? null
     if (activeShellRunId === runId) setShellRunId(fallbackRun?.run_id ?? null)
+    markClosingShellRun(workspace.id, runId)
     if (shellStartRunByWorkspaceRef.current.get(workspace.id)?.run_id === runId) {
       forgetRememberedShellRun(workspace.id)
     }
     void closeWorkspaceShell(workspace.id, runId).catch((error) => {
+      unmarkClosingShellRun(workspace.id, runId)
       const message = error instanceof Error ? error.message : String(error)
       toast.show({ kind: 'error', message: t('shellTerminal.closeFailed', { message }) })
     })

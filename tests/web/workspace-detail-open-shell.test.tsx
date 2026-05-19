@@ -166,22 +166,47 @@ describe('WorkspaceDetail shell terminal button', () => {
     expect(within(panel).getByTestId(`terminal-panel-slot-shell-${run.run_id}`)).toBeInTheDocument()
   })
 
-  test('starts a workspace shell when only a stale shell run exists without a shell tab', async () => {
-    const staleRun = shellRun()
+  test('opens an observed shell run when it has no tab yet', async () => {
+    const shell = shellRun()
+
+    renderWorkspaceDetail({ terminalRuns: [shell] })
+    fireEvent.click(screen.getByTestId('open-workspace-shell'))
+
+    const panel = await screen.findByTestId('terminal-bottom-panel')
+    expect(
+      within(panel).getByTestId(`terminal-panel-slot-shell-${shell.run_id}`)
+    ).toBeInTheDocument()
+    expect(startWorkspaceShell).not.toHaveBeenCalled()
+  })
+
+  test('starts a workspace shell when only a locally closing shell run remains', async () => {
+    const closingRun = shellRun()
     const run = shellRun('shell-run-2')
+    window.localStorage.setItem(
+      `hive.terminal-panel.tabs.${workspace.id}`,
+      JSON.stringify([`shell:${closingRun.run_id}`])
+    )
+    window.localStorage.setItem(
+      `hive.terminal-panel.active.${workspace.id}`,
+      `shell:${closingRun.run_id}`
+    )
     vi.mocked(startWorkspaceShell).mockResolvedValue(run)
 
-    const view = renderWorkspaceDetail({ terminalRuns: [staleRun] })
+    const view = renderWorkspaceDetail({ terminalRuns: [closingRun] })
+    const panel = await screen.findByTestId('terminal-bottom-panel')
+    fireEvent.click(within(panel).getByTestId(`terminal-tab-close-shell:${closingRun.run_id}`))
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
 
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
     expect(startWorkspaceShell).toHaveBeenCalledWith(workspace.id)
 
     view.rerender(
-      workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [staleRun, run] })
+      workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [closingRun, run] })
     )
-    const panel = await screen.findByTestId('terminal-bottom-panel')
-    expect(within(panel).getByTestId(`terminal-panel-slot-shell-${run.run_id}`)).toBeInTheDocument()
+    const reopenedPanel = await screen.findByTestId('terminal-bottom-panel')
+    expect(
+      within(reopenedPanel).getByTestId(`terminal-panel-slot-shell-${run.run_id}`)
+    ).toBeInTheDocument()
   })
 
   test('focuses an existing shell tab without starting another shell', async () => {
