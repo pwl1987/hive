@@ -2,6 +2,7 @@ import { Loader2, PlayCircle, RefreshCw, ServerCrash } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useI18n } from '../i18n.js'
+import { silentReload } from '../useBeforeUnloadGuard.js'
 
 const RECONNECT_INTERVAL_MS = 3000
 
@@ -25,8 +26,13 @@ export const RuntimeOfflinePage = ({ onTryDemo }: RuntimeOfflinePageProps = {}) 
   const [retrying, setRetrying] = useState(false)
   const aliveRef = useRef(true)
 
+  // silentReload arms the beforeunload guard so this auto-recovery reload
+  // doesn't surface the "Reload site?" close-confirmation dialog. Without it
+  // both the Retry click and the 3s polling reload would be intercepted by
+  // the always-on guard mounted in AppInner.
   const reload = useCallback(() => {
-    if (typeof window !== 'undefined') window.location.reload()
+    if (typeof window === 'undefined') return
+    silentReload()
   }, [])
 
   const probe = useCallback(async (): Promise<boolean> => {

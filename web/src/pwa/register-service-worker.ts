@@ -5,7 +5,7 @@
 // The split lets us inject a fake env in unit tests instead of leaning on
 // jsdom's missing ServiceWorker implementation or import.meta.env stubbing.
 
-import { allowNextUnloadSilently } from '../useBeforeUnloadGuard.js'
+import { silentReload } from '../useBeforeUnloadGuard.js'
 
 export type ServiceWorkerUpdateApply = () => void
 type ServiceWorkerUpdateListener = (apply: ServiceWorkerUpdateApply | null) => void
@@ -44,10 +44,9 @@ export const __setServiceWorkerUpdateForTests = (apply: ServiceWorkerUpdateApply
 export interface ServiceWorkerEnv {
   isProd: boolean
   serviceWorker: ServiceWorkerContainer | null
+  // Production callers should inject silentReload here so the guard skips the
+  // SW-triggered reload; tests may inject a plain spy.
   reload: () => void
-  // Called immediately before any auto-reload so the beforeunload guard skips
-  // this transition. Optional so existing tests that don't care can omit it.
-  allowSilentUnload?: () => void
 }
 
 const CONTROLLERCHANGE_FALLBACK_MS = 2000
@@ -80,10 +79,7 @@ export const registerServiceWorkerWithEnv = async (env: ServiceWorkerEnv): Promi
           worker.postMessage({ type: 'SKIP_WAITING' })
           // Belt and braces: if controllerchange doesn't reach us within a
           // couple seconds, reload anyway so the user is never stuck.
-          setTimeout(() => {
-            env.allowSilentUnload?.()
-            env.reload()
-          }, CONTROLLERCHANGE_FALLBACK_MS)
+          setTimeout(env.reload, CONTROLLERCHANGE_FALLBACK_MS)
         })
       }
     }
@@ -100,7 +96,6 @@ export const registerServiceWorkerWithEnv = async (env: ServiceWorkerEnv): Promi
   env.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return
     refreshing = true
-    env.allowSilentUnload?.()
     env.reload()
   })
 }
@@ -108,11 +103,8 @@ export const registerServiceWorkerWithEnv = async (env: ServiceWorkerEnv): Promi
 export const registerServiceWorker = (): Promise<void> => {
   if (typeof navigator === 'undefined' || typeof window === 'undefined') return Promise.resolve()
   return registerServiceWorkerWithEnv({
-    allowSilentUnload: allowNextUnloadSilently,
     isProd: import.meta.env.PROD,
     serviceWorker: 'serviceWorker' in navigator ? navigator.serviceWorker : null,
-    reload: () => {
-      window.location.reload()
-    },
+    reload: silentReload,
   })
 }

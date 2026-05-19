@@ -1,13 +1,35 @@
 // @vitest-environment jsdom
 
 import { cleanup, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   __resetBeforeUnloadGuardForTests,
   allowNextUnloadSilently,
+  silentReload,
   useBeforeUnloadGuard,
 } from '../../web/src/useBeforeUnloadGuard.js'
+
+let originalLocation: Location
+let reloadSpy: ReturnType<typeof vi.fn>
+
+const installLocationSpy = () => {
+  originalLocation = window.location
+  reloadSpy = vi.fn()
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: { ...originalLocation, reload: reloadSpy },
+  })
+}
+
+const restoreLocation = () => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: originalLocation,
+  })
+}
 
 const dispatchBeforeUnload = () => {
   const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent
@@ -64,5 +86,23 @@ describe('useBeforeUnloadGuard', () => {
     const second = dispatchBeforeUnload()
     expect(second.allowed).toBe(false)
     expect(second.event.defaultPrevented).toBe(true)
+  })
+
+  test('silentReload arms the guard and triggers window.location.reload atomically', () => {
+    installLocationSpy()
+    try {
+      renderHook(() => useBeforeUnloadGuard(true))
+
+      silentReload()
+      expect(reloadSpy).toHaveBeenCalledTimes(1)
+
+      // The reload jsdom-stubbed away; verify the flag was armed by dispatching
+      // a beforeunload and asserting it slipped past the guard.
+      const { allowed, event } = dispatchBeforeUnload()
+      expect(allowed).toBe(true)
+      expect(event.defaultPrevented).toBe(false)
+    } finally {
+      restoreLocation()
+    }
   })
 })

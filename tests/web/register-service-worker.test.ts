@@ -197,9 +197,7 @@ describe('registerServiceWorkerWithEnv', () => {
     })
 
     const reload = vi.fn()
-    const allowSilentUnload = vi.fn()
     await registerServiceWorkerWithEnv({
-      allowSilentUnload,
       isProd: true,
       reload,
       serviceWorker: container as unknown as ServiceWorkerContainer,
@@ -210,7 +208,6 @@ describe('registerServiceWorkerWithEnv', () => {
     apply?.()
     expect(installing.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' })
     expect(reload).not.toHaveBeenCalled()
-    expect(allowSilentUnload).not.toHaveBeenCalled()
 
     // The fallback reload should fire ~2s later in case controllerchange never
     // arrives.
@@ -218,12 +215,6 @@ describe('registerServiceWorkerWithEnv', () => {
     expect(reload).not.toHaveBeenCalled()
     vi.advanceTimersByTime(2)
     expect(reload).toHaveBeenCalledTimes(1)
-    expect(allowSilentUnload).toHaveBeenCalledTimes(1)
-    // allowSilentUnload must precede reload so the beforeunload guard skips
-    // this auto-reload without us toggling the global guard off.
-    expect(allowSilentUnload.mock.invocationCallOrder[0]).toBeLessThan(
-      reload.mock.invocationCallOrder[0] as number
-    )
 
     unsubscribe()
   })
@@ -232,10 +223,8 @@ describe('registerServiceWorkerWithEnv', () => {
     const container = new MockContainer()
     container.register.mockResolvedValue(new MockRegistration())
     const reload = vi.fn()
-    const allowSilentUnload = vi.fn()
 
     await registerServiceWorkerWithEnv({
-      allowSilentUnload,
       isProd: true,
       reload,
       serviceWorker: container as unknown as ServiceWorkerContainer,
@@ -246,10 +235,6 @@ describe('registerServiceWorkerWithEnv', () => {
     container.dispatchEvent(new Event('controllerchange'))
 
     expect(reload).toHaveBeenCalledTimes(1)
-    expect(allowSilentUnload).toHaveBeenCalledTimes(1)
-    expect(allowSilentUnload.mock.invocationCallOrder[0]).toBeLessThan(
-      reload.mock.invocationCallOrder[0] as number
-    )
   })
 
   test('register() failures are swallowed so they do not block app boot', async () => {
