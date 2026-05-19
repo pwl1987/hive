@@ -76,6 +76,12 @@ export const WorkspaceDetail = ({
     if (deleteWorkerError) toast.show({ kind: 'error', message: deleteWorkerError })
   }, [deleteWorkerError, toast])
 
+  // Start failures no longer have a modal banner to display them — surface
+  // via toast to keep parity with delete-error feedback.
+  useEffect(() => {
+    if (startWorkerError) toast.show({ kind: 'error', message: startWorkerError })
+  }, [startWorkerError, toast])
+
   // B2: when the user switches workspace, clear local error state so we don't
   // surface a stale error from the previous workspace as a fresh toast.
   // biome-ignore lint/correctness/useExhaustiveDependencies: effect intentionally fires only on workspace switch
