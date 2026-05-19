@@ -39,7 +39,13 @@ describe('useTerminalPanelTabs', () => {
 
   test('openWorkerTab adds, persists, and activates the worker tab', () => {
     const workers = [
-      { id: 'worker-a', name: 'Alice', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
+      {
+        id: 'worker-a',
+        name: 'Alice',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
     ]
     const { result } = renderHook(() =>
       useTerminalPanelTabs({ workspaceId: WORKSPACE_ID, workers, terminalRuns: [] })
@@ -52,7 +58,11 @@ describe('useTerminalPanelTabs', () => {
   })
 
   test('openShellTab adds, persists, and activates the shell tab', () => {
-    const run = buildRun({ agent_id: `${WORKSPACE_ID}:shell`, run_id: 'run-shell', agent_name: 'shell' })
+    const run = buildRun({
+      agent_id: `${WORKSPACE_ID}:shell`,
+      run_id: 'run-shell',
+      agent_name: 'shell',
+    })
     const { result } = renderHook(() =>
       useTerminalPanelTabs({ workspaceId: WORKSPACE_ID, workers: [], terminalRuns: [run] })
     )
@@ -63,8 +73,20 @@ describe('useTerminalPanelTabs', () => {
 
   test('closeTab removes and reactivates a neighbor', () => {
     const workers = [
-      { id: 'worker-a', name: 'Alice', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
-      { id: 'worker-b', name: 'Bob', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
+      {
+        id: 'worker-a',
+        name: 'Alice',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
+      {
+        id: 'worker-b',
+        name: 'Bob',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
     ]
     const { result } = renderHook(() =>
       useTerminalPanelTabs({ workspaceId: WORKSPACE_ID, workers, terminalRuns: [] })
@@ -79,8 +101,20 @@ describe('useTerminalPanelTabs', () => {
 
   test('opening an already-open tab just reactivates it (no duplicate)', () => {
     const workers = [
-      { id: 'worker-a', name: 'Alice', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
-      { id: 'worker-b', name: 'Bob', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
+      {
+        id: 'worker-a',
+        name: 'Alice',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
+      {
+        id: 'worker-b',
+        name: 'Bob',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
     ]
     const { result } = renderHook(() =>
       useTerminalPanelTabs({ workspaceId: WORKSPACE_ID, workers, terminalRuns: [] })
@@ -94,7 +128,13 @@ describe('useTerminalPanelTabs', () => {
 
   test('worker tab disappears when worker is removed from workers prop', () => {
     const workers = [
-      { id: 'worker-a', name: 'Alice', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
+      {
+        id: 'worker-a',
+        name: 'Alice',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
     ]
     const { rerender, result } = renderHook(
       ({ ws }: { ws: typeof workers }) =>
@@ -112,7 +152,13 @@ describe('useTerminalPanelTabs', () => {
     window.localStorage.setItem('hive.terminal-panel.tabs.ws-2', JSON.stringify(['worker:zzz']))
     window.localStorage.setItem('hive.terminal-panel.active.ws-2', 'worker:zzz')
     const workers = [
-      { id: 'zzz', name: 'Zed', role: 'coder' as const, status: 'idle' as const, pendingTaskCount: 0 },
+      {
+        id: 'zzz',
+        name: 'Zed',
+        role: 'coder' as const,
+        status: 'idle' as const,
+        pendingTaskCount: 0,
+      },
     ]
     const { rerender, result } = renderHook(
       ({ wsId }: { wsId: string }) =>
@@ -137,9 +183,7 @@ describe('useTerminalPanelTabs', () => {
     )
     // Tabs derive to [] because workers/runs are empty, but localStorage
     // must not be rewritten to [].
-    expect(window.localStorage.getItem(TABS_KEY)).toBe(
-      JSON.stringify(['worker:a', 'shell:run-x'])
-    )
+    expect(window.localStorage.getItem(TABS_KEY)).toBe(JSON.stringify(['worker:a', 'shell:run-x']))
     expect(window.localStorage.getItem(ACTIVE_KEY)).toBe('shell:run-x')
   })
 })

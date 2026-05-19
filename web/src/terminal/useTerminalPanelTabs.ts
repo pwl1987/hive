@@ -111,10 +111,7 @@ export const useTerminalPanelTabs = ({ workspaceId, workers, terminalRuns }: Par
     writeStored(activeKey(workspaceId), activeId ?? '')
   }, [activeId, workspaceId])
 
-  const workerById = useMemo(
-    () => new Map(workers.map((w) => [w.id, w] as const)),
-    [workers]
-  )
+  const workerById = useMemo(() => new Map(workers.map((w) => [w.id, w] as const)), [workers])
   const shellRunById = useMemo(() => {
     const map = new Map<string, TerminalRunSummary>()
     for (const run of terminalRuns) {
