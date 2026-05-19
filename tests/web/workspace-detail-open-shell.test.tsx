@@ -236,4 +236,32 @@ describe('WorkspaceDetail shell terminal button', () => {
 
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
   })
+
+  test('keeps a pending shell start locked to its workspace across workspace switches', async () => {
+    const ws1Start = deferred<TerminalRunSummary>()
+    vi.mocked(startWorkspaceShell).mockReturnValueOnce(ws1Start.promise)
+
+    const view = renderWorkspaceDetail()
+    fireEvent.click(screen.getByTestId('open-workspace-shell'))
+    expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
+    expect(startWorkspaceShell).toHaveBeenLastCalledWith(workspace.id)
+
+    view.rerender(workspaceDetailUi({ selectedWorkspace: workspaceTwo, terminalRuns: [] }))
+    view.rerender(workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [] }))
+    fireEvent.click(screen.getByTestId('open-workspace-shell'))
+
+    expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
+
+    const lateWs1Run = shellRun('ws-1-late-shell-run', workspace.id)
+    await act(async () => {
+      ws1Start.resolve(lateWs1Run)
+      await ws1Start.promise
+    })
+
+    vi.mocked(startWorkspaceShell).mockResolvedValueOnce(shellRun('ws-1-shell-run-2', workspace.id))
+    fireEvent.click(screen.getByTestId('open-workspace-shell'))
+
+    expect(startWorkspaceShell).toHaveBeenCalledTimes(2)
+    expect(startWorkspaceShell).toHaveBeenLastCalledWith(workspace.id)
+  })
 })

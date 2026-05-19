@@ -65,7 +65,7 @@ export const WorkspaceDetail = ({
   // startWorkspaceShell twice before React commits `disabled={shellStarting}`.
   // The server's shell numbering counter would otherwise skip ahead, leaving
   // the user with shells named "Shell 1" / "Shell 3" / ... .
-  const shellStartInFlightRef = useRef(false)
+  const shellStartInFlightByWorkspaceRef = useRef(new Map<string, number>())
   const shellStartRequestSeqRef = useRef(0)
   const shellStartWorkspaceIdRef = useRef<string | null>(workspace?.id ?? null)
   const toast = useToast()
@@ -97,7 +97,6 @@ export const WorkspaceDetail = ({
     if (shellStartWorkspaceIdRef.current === workspaceId) return
     shellStartWorkspaceIdRef.current = workspaceId
     shellStartRequestSeqRef.current += 1
-    shellStartInFlightRef.current = false
   }, [workspace?.id])
 
   // B2: when the user switches workspace, clear local error state so we don't
@@ -108,7 +107,6 @@ export const WorkspaceDetail = ({
     setShellError(null)
     setShellRunId(null)
     setShellStarting(false)
-    shellStartInFlightRef.current = false
     setStartWorkerError(null)
     setStartingWorkerId(null)
   }, [workspace?.id])
@@ -185,11 +183,11 @@ export const WorkspaceDetail = ({
   }
 
   const startShell = () => {
-    if (shellStartInFlightRef.current) return
-    shellStartInFlightRef.current = true
+    if (shellStartInFlightByWorkspaceRef.current.has(workspace.id)) return
     const requestWorkspaceId = workspace.id
     const requestSeq = shellStartRequestSeqRef.current + 1
     shellStartRequestSeqRef.current = requestSeq
+    shellStartInFlightByWorkspaceRef.current.set(requestWorkspaceId, requestSeq)
     const isCurrentShellStart = () =>
       shellStartWorkspaceIdRef.current === requestWorkspaceId &&
       shellStartRequestSeqRef.current === requestSeq
@@ -206,14 +204,13 @@ export const WorkspaceDetail = ({
         setShellError(error instanceof Error ? error.message : String(error))
       })
       .finally(() => {
-        if (!isCurrentShellStart()) return
-        shellStartInFlightRef.current = false
-        setShellStarting(false)
+        shellStartInFlightByWorkspaceRef.current.delete(requestWorkspaceId)
+        if (isCurrentShellStart()) setShellStarting(false)
       })
   }
 
   const openShell = () => {
-    if (shellStartInFlightRef.current || shellStarting) return
+    if (shellStartInFlightByWorkspaceRef.current.has(workspace.id) || shellStarting) return
     const existingShellTab = panelTabs.tabs.find((tab) => tab.kind === 'shell')
     if (existingShellTab) {
       panelTabs.setActive(existingShellTab.id)
