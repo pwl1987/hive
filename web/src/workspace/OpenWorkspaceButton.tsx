@@ -19,8 +19,6 @@ interface OpenWorkspaceButtonProps {
   workspace: WorkspaceSummary | null | undefined
 }
 
-const TARGET_ICON_FILTER = 'brightness(0) invert(1)' as const
-
 const ERROR_TOAST_KEY: Record<
   Exclude<OpenWorkspaceResult & { ok: false }, never>['errorCode'],
   TranslationKey
@@ -130,8 +128,6 @@ export const OpenWorkspaceButton = ({ workspace }: OpenWorkspaceButtonProps) => 
                   width: 13,
                   height: 13,
                   objectFit: 'contain',
-                  filter: TARGET_ICON_FILTER,
-                  opacity: 0.9,
                 }}
               />
             )}
@@ -183,8 +179,6 @@ export const OpenWorkspaceButton = ({ workspace }: OpenWorkspaceButtonProps) => 
                     width: 14,
                     height: 14,
                     objectFit: 'contain',
-                    filter: TARGET_ICON_FILTER,
-                    opacity: 0.9,
                   }}
                 />
                 <span className="flex-1">{t(option.labelKey)}</span>

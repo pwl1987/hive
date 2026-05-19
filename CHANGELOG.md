@@ -42,6 +42,10 @@ chrome.
   Cmd-W on an installed app never closes silently. Modern browsers gate the
   prompt on prior page interaction — opening the window and immediately
   pressing Cmd-W still closes cleanly by browser policy.
+- Open Workspace dropdown now uses each app's brand color for its icon
+  instead of the previous monochrome white treatment, and visually separates
+  VS Code from VS Code Insiders so users can tell their installed targets
+  apart at a glance.
 
 ## 1.2.0 - 2026-05-18
 

@@ -13,6 +13,7 @@ import intellijIcon from '../assets/open-targets/intellijidea.svg'
 import iterm2Icon from '../assets/open-targets/iterm2.svg'
 import terminalIcon from '../assets/open-targets/terminal.svg'
 import vscodeIcon from '../assets/open-targets/vscode.svg'
+import vscodeInsidersIcon from '../assets/open-targets/vscode-insiders.svg'
 import windsurfIcon from '../assets/open-targets/windsurf.svg'
 import zedIcon from '../assets/open-targets/zed.svg'
 
@@ -51,7 +52,10 @@ const FINDER_LABEL_KEY_BY_PLATFORM: Record<OpenTargetPlatform, OpenTargetOption[
 
 const TARGET_DATA: Record<OpenTargetId, Omit<OpenTargetOption, 'id'>> = {
   vscode: { labelKey: 'openWorkspace.target.vscode', iconSrc: vscodeIcon },
-  'vscode-insiders': { labelKey: 'openWorkspace.target.vscodeInsiders', iconSrc: vscodeIcon },
+  'vscode-insiders': {
+    labelKey: 'openWorkspace.target.vscodeInsiders',
+    iconSrc: vscodeInsidersIcon,
+  },
   cursor: { labelKey: 'openWorkspace.target.cursor', iconSrc: cursorIcon },
   windsurf: { labelKey: 'openWorkspace.target.windsurf', iconSrc: windsurfIcon },
   // The actual labelKey is resolved per platform in getOpenTargetOption.
