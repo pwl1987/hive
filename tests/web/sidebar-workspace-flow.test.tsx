@@ -194,9 +194,7 @@ describe('Sidebar EmptyState CTA', () => {
     // making the avatar shrink when the user expanded the sidebar. Both must
     // render at the same size now — the size is written as an inline px width
     // by Avatar.tsx, so we compare directly.
-    expect((wideAvatar as HTMLElement).style.width).toBe(
-      (compactAvatar as HTMLElement).style.width
-    )
+    expect((wideAvatar as HTMLElement).style.width).toBe((compactAvatar as HTMLElement).style.width)
   })
 
   test('clicking the compact avatar cell selects the workspace', () => {
