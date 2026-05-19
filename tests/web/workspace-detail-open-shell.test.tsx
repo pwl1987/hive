@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { TeamListItem, WorkspaceSummary } from '../../src/shared/types.js'
 import type { TerminalRunSummary } from '../../web/src/api.js'
-import { startWorkspaceShell } from '../../web/src/api.js'
+import { closeWorkspaceShell, startWorkspaceShell } from '../../web/src/api.js'
 import { NotificationProvider } from '../../web/src/notifications/NotificationProvider.js'
 import { ToastProvider } from '../../web/src/ui/useToast.js'
 import { WorkspaceDetail } from '../../web/src/WorkspaceDetail.js'
@@ -136,6 +136,8 @@ const deferred = <T,>() => {
 
 beforeEach(() => {
   window.localStorage.clear()
+  vi.mocked(closeWorkspaceShell).mockReset()
+  vi.mocked(closeWorkspaceShell).mockResolvedValue(undefined)
   vi.mocked(startWorkspaceShell).mockReset()
 })
 
@@ -179,9 +181,10 @@ describe('WorkspaceDetail shell terminal button', () => {
     expect(startWorkspaceShell).not.toHaveBeenCalled()
   })
 
-  test('starts a workspace shell when only a locally closing shell run remains', async () => {
+  test('waits for a locally closing shell run before starting a replacement', async () => {
     const closingRun = shellRun()
     const run = shellRun('shell-run-2')
+    const close = deferred<void>()
     window.localStorage.setItem(
       `hive.terminal-panel.tabs.${workspace.id}`,
       JSON.stringify([`shell:${closingRun.run_id}`])
@@ -190,6 +193,7 @@ describe('WorkspaceDetail shell terminal button', () => {
       `hive.terminal-panel.active.${workspace.id}`,
       `shell:${closingRun.run_id}`
     )
+    vi.mocked(closeWorkspaceShell).mockReturnValue(close.promise)
     vi.mocked(startWorkspaceShell).mockResolvedValue(run)
 
     const view = renderWorkspaceDetail({ terminalRuns: [closingRun] })
@@ -197,6 +201,17 @@ describe('WorkspaceDetail shell terminal button', () => {
     fireEvent.click(within(panel).getByTestId(`terminal-tab-close-shell:${closingRun.run_id}`))
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
 
+    expect(closeWorkspaceShell).toHaveBeenCalledWith(workspace.id, closingRun.run_id)
+    expect(startWorkspaceShell).not.toHaveBeenCalled()
+
+    await act(async () => {
+      close.resolve()
+      await close.promise
+    })
+
+    await waitFor(() => {
+      expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
+    })
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
     expect(startWorkspaceShell).toHaveBeenCalledWith(workspace.id)
 
@@ -277,9 +292,10 @@ describe('WorkspaceDetail shell terminal button', () => {
 
   test('keeps a pending shell start locked to its workspace across workspace switches', async () => {
     const ws1Start = deferred<TerminalRunSummary>()
+    const onShellRunStarted = vi.fn()
     vi.mocked(startWorkspaceShell).mockReturnValueOnce(ws1Start.promise)
 
-    const view = renderWorkspaceDetail()
+    const view = renderWorkspaceDetail({ onShellRunStarted })
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
     expect(startWorkspaceShell).toHaveBeenLastCalledWith(workspace.id)
@@ -295,11 +311,12 @@ describe('WorkspaceDetail shell terminal button', () => {
       ws1Start.resolve(lateWs1Run)
       await ws1Start.promise
     })
+    expect(onShellRunStarted).toHaveBeenCalledWith(workspace.id, lateWs1Run)
 
+    view.rerender(workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [lateWs1Run] }))
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
 
-    view.rerender(workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [lateWs1Run] }))
     const panel = await screen.findByTestId('terminal-bottom-panel')
     expect(
       within(panel).getByTestId(`terminal-panel-slot-shell-${lateWs1Run.run_id}`)
@@ -310,29 +327,19 @@ describe('WorkspaceDetail shell terminal button', () => {
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
   })
 
-  test('forgets a remembered shell run when polling never confirms it', async () => {
-    vi.useFakeTimers()
-    const start = deferred<TerminalRunSummary>()
-    const startedRun = shellRun('ws-1-started-but-never-polled', workspace.id)
-    vi.mocked(startWorkspaceShell)
-      .mockReturnValueOnce(start.promise)
-      .mockResolvedValueOnce(shellRun('ws-1-shell-run-2', workspace.id))
+  test('reopens an optimistically observed shell run without a timeout window', async () => {
+    const startedRun = shellRun('ws-1-started-but-not-polled', workspace.id)
+    vi.mocked(startWorkspaceShell).mockResolvedValue(startedRun)
 
-    renderWorkspaceDetail()
+    const view = renderWorkspaceDetail()
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
-    await act(async () => {
-      start.resolve(startedRun)
-      await start.promise
+    await waitFor(() => {
+      expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
     })
 
+    view.rerender(workspaceDetailUi({ selectedWorkspace: workspace, terminalRuns: [startedRun] }))
     fireEvent.click(screen.getByTestId('open-workspace-shell'))
+
     expect(startWorkspaceShell).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      vi.runOnlyPendingTimers()
-    })
-    fireEvent.click(screen.getByTestId('open-workspace-shell'))
-
-    expect(startWorkspaceShell).toHaveBeenCalledTimes(2)
   })
 })

@@ -20,7 +20,7 @@ export const WorkspaceTerminalPanels = ({
 }: WorkspaceTerminalPanelsProps) => {
   const { t } = useI18n()
   const [terminalRuns, setTerminalRuns] = useState<TerminalRunSummary[]>([])
-  const mergedRuns = mergeTerminalRuns(terminalRuns, optimisticRuns)
+  const mergedRuns = mergeTerminalRuns(terminalRuns, optimisticRuns, workspaceId)
 
   useEffect(() => {
     let cancelled = false

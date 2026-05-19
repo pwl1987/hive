@@ -39,8 +39,6 @@ type WorkspaceDetailProps = {
   workspace: WorkspaceSummary | undefined
 }
 
-const REMEMBERED_SHELL_RUN_TTL_MS = 3000
-
 export const WorkspaceDetail = ({
   onCreateWorker,
   onDeleteWorker,
@@ -71,9 +69,9 @@ export const WorkspaceDetail = ({
   // the user with shells named "Shell 1" / "Shell 3" / ... .
   const shellStartInFlightByWorkspaceRef = useRef(new Map<string, number>())
   const shellStartRequestSeqRef = useRef(0)
-  const shellStartRunByWorkspaceRef = useRef(new Map<string, TerminalRunSummary>())
-  const shellStartRunForgetTimersRef = useRef(new Map<string, number>())
   const closingShellRunIdsByWorkspaceRef = useRef(new Map<string, Set<string>>())
+  const closingShellPromisesByWorkspaceRef = useRef(new Map<string, Map<string, Promise<void>>>())
+  const shellStartAfterCloseByWorkspaceRef = useRef(new Set<string>())
   const selectedWorkspaceIdRef = useRef<string | null>(workspace?.id ?? null)
   const toast = useToast()
   const composer = useWorkerComposer({ createWorker: onCreateWorker, open: composerOpen })
@@ -84,34 +82,31 @@ export const WorkspaceDetail = ({
     closingShellRunIdsByWorkspaceRef.current.set(workspaceId, ids)
   }, [])
 
+  const trackClosingShellPromise = useCallback(
+    (workspaceId: string, runId: string, promise: Promise<void>) => {
+      const workspacePromises =
+        closingShellPromisesByWorkspaceRef.current.get(workspaceId) ??
+        new Map<string, Promise<void>>()
+      workspacePromises.set(runId, promise)
+      closingShellPromisesByWorkspaceRef.current.set(workspaceId, workspacePromises)
+      void promise
+        .finally(() => {
+          const current = closingShellPromisesByWorkspaceRef.current.get(workspaceId)
+          if (!current) return
+          current.delete(runId)
+          if (current.size === 0) closingShellPromisesByWorkspaceRef.current.delete(workspaceId)
+        })
+        .catch(() => {})
+    },
+    []
+  )
+
   const unmarkClosingShellRun = useCallback((workspaceId: string, runId: string) => {
     const ids = closingShellRunIdsByWorkspaceRef.current.get(workspaceId)
     if (!ids) return
     ids.delete(runId)
     if (ids.size === 0) closingShellRunIdsByWorkspaceRef.current.delete(workspaceId)
   }, [])
-
-  const forgetRememberedShellRun = useCallback((workspaceId: string) => {
-    const timer = shellStartRunForgetTimersRef.current.get(workspaceId)
-    if (timer) window.clearTimeout(timer)
-    shellStartRunForgetTimersRef.current.delete(workspaceId)
-    shellStartRunByWorkspaceRef.current.delete(workspaceId)
-  }, [])
-
-  const rememberShellRun = useCallback(
-    (workspaceId: string, run: TerminalRunSummary) => {
-      forgetRememberedShellRun(workspaceId)
-      shellStartRunByWorkspaceRef.current.set(workspaceId, run)
-      const timer = window.setTimeout(() => {
-        if (shellStartRunByWorkspaceRef.current.get(workspaceId)?.run_id === run.run_id) {
-          shellStartRunByWorkspaceRef.current.delete(workspaceId)
-        }
-        shellStartRunForgetTimersRef.current.delete(workspaceId)
-      }, REMEMBERED_SHELL_RUN_TTL_MS)
-      shellStartRunForgetTimersRef.current.set(workspaceId, timer)
-    },
-    [forgetRememberedShellRun]
-  )
 
   // Surface composer / delete errors as toasts instead of inline alert bands.
   useEffect(() => {
@@ -140,24 +135,12 @@ export const WorkspaceDetail = ({
 
   useEffect(
     () => () => {
-      for (const timer of shellStartRunForgetTimersRef.current.values()) {
-        window.clearTimeout(timer)
-      }
-      shellStartRunForgetTimersRef.current.clear()
-      shellStartRunByWorkspaceRef.current.clear()
       closingShellRunIdsByWorkspaceRef.current.clear()
+      closingShellPromisesByWorkspaceRef.current.clear()
+      shellStartAfterCloseByWorkspaceRef.current.clear()
     },
     []
   )
-
-  useEffect(() => {
-    if (!workspace) return
-    const rememberedRun = shellStartRunByWorkspaceRef.current.get(workspace.id)
-    if (!rememberedRun) return
-    if (terminalRuns.some((run) => run.run_id === rememberedRun.run_id)) {
-      forgetRememberedShellRun(workspace.id)
-    }
-  }, [forgetRememberedShellRun, terminalRuns, workspace])
 
   useEffect(() => {
     if (!workspace) return
@@ -267,7 +250,6 @@ export const WorkspaceDetail = ({
     setShellStarting(true)
     void startWorkspaceShell(requestWorkspaceId)
       .then((run) => {
-        rememberShellRun(requestWorkspaceId, run)
         onShellRunStarted?.(requestWorkspaceId, run)
         if (!isSelectedWorkspace()) return
         setShellRunId(run.run_id)
@@ -284,18 +266,49 @@ export const WorkspaceDetail = ({
       })
   }
 
+  const startShellAfterClosingRuns = () => {
+    const requestWorkspaceId = workspace.id
+    if (
+      shellStartInFlightByWorkspaceRef.current.has(requestWorkspaceId) ||
+      shellStartAfterCloseByWorkspaceRef.current.has(requestWorkspaceId)
+    ) {
+      return
+    }
+
+    const closingPromises = Array.from(
+      closingShellPromisesByWorkspaceRef.current.get(requestWorkspaceId)?.values() ?? []
+    )
+    if (closingPromises.length === 0) {
+      startShell()
+      return
+    }
+
+    shellStartAfterCloseByWorkspaceRef.current.add(requestWorkspaceId)
+    setShellError(null)
+    setShellStarting(true)
+    void Promise.allSettled(closingPromises)
+      .then((results) => {
+        if (results.some((result) => result.status === 'rejected')) return
+        if (selectedWorkspaceIdRef.current !== requestWorkspaceId) return
+        if (shellStartInFlightByWorkspaceRef.current.has(requestWorkspaceId)) return
+        startShell()
+      })
+      .finally(() => {
+        shellStartAfterCloseByWorkspaceRef.current.delete(requestWorkspaceId)
+        if (
+          selectedWorkspaceIdRef.current === requestWorkspaceId &&
+          !shellStartInFlightByWorkspaceRef.current.has(requestWorkspaceId)
+        ) {
+          setShellStarting(false)
+        }
+      })
+  }
+
   const openShell = () => {
     if (shellStartInFlightByWorkspaceRef.current.has(workspace.id) || shellStarting) return
     const existingShellTab = panelTabs.tabs.find((tab) => tab.kind === 'shell')
     if (existingShellTab) {
       panelTabs.setActive(existingShellTab.id)
-      return
-    }
-    const rememberedShellRun = shellStartRunByWorkspaceRef.current.get(workspace.id)
-    if (rememberedShellRun) {
-      onShellRunStarted?.(workspace.id, rememberedShellRun)
-      setShellRunId(rememberedShellRun.run_id)
-      panelTabs.openShellTab(rememberedShellRun.run_id)
       return
     }
     const closingShellRunIds =
@@ -306,6 +319,10 @@ export const WorkspaceDetail = ({
       panelTabs.openShellTab(reusableShellRun.run_id)
       return
     }
+    if (closingShellRunIds.size > 0) {
+      startShellAfterClosingRuns()
+      return
+    }
     startShell()
   }
 
@@ -313,14 +330,14 @@ export const WorkspaceDetail = ({
     const fallbackRun = shellRuns.find((run) => run.run_id !== runId) ?? null
     if (activeShellRunId === runId) setShellRunId(fallbackRun?.run_id ?? null)
     markClosingShellRun(workspace.id, runId)
-    if (shellStartRunByWorkspaceRef.current.get(workspace.id)?.run_id === runId) {
-      forgetRememberedShellRun(workspace.id)
-    }
-    void closeWorkspaceShell(workspace.id, runId).catch((error) => {
+    const closePromise = closeWorkspaceShell(workspace.id, runId).catch((error) => {
       unmarkClosingShellRun(workspace.id, runId)
       const message = error instanceof Error ? error.message : String(error)
       toast.show({ kind: 'error', message: t('shellTerminal.closeFailed', { message }) })
+      throw error
     })
+    trackClosingShellPromise(workspace.id, runId, closePromise)
+    void closePromise.catch(() => {})
   }
 
   const orchWidth = `${(split.orchPct * 100).toFixed(2)}%`

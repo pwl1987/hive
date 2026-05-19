@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import type { TerminalRunSummary } from '../api.js'
+import { isWorkspaceShellRun, type TerminalRunSummary } from '../api.js'
 
 const OPTIMISTIC_RUN_TTL_MS = 3000
 
@@ -16,15 +16,18 @@ interface OptimisticRunInput {
 
 export const mergeTerminalRuns = (
   actualRuns: TerminalRunSummary[],
-  optimisticRuns: TerminalRunSummary[]
+  optimisticRuns: TerminalRunSummary[],
+  workspaceId?: string | null
 ): TerminalRunSummary[] => {
   const actualRunIds = new Set(actualRuns.map((run) => run.run_id))
   const actualAgentIds = new Set(actualRuns.map((run) => run.agent_id))
   return [
     ...actualRuns,
-    ...optimisticRuns.filter(
-      (run) => !actualRunIds.has(run.run_id) && !actualAgentIds.has(run.agent_id)
-    ),
+    ...optimisticRuns.filter((run) => {
+      if (actualRunIds.has(run.run_id)) return false
+      if (workspaceId && isWorkspaceShellRun(run, workspaceId)) return true
+      return !actualAgentIds.has(run.agent_id)
+    }),
   ]
 }
 
@@ -95,7 +98,8 @@ export const useOptimisticTerminalRuns = (
     () =>
       mergeTerminalRuns(
         actualRuns,
-        workspaceId ? (optimisticRunsByWorkspaceId[workspaceId] ?? []) : []
+        workspaceId ? (optimisticRunsByWorkspaceId[workspaceId] ?? []) : [],
+        workspaceId
       ),
     [actualRuns, optimisticRunsByWorkspaceId, workspaceId]
   )
