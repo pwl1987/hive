@@ -4,7 +4,8 @@ import type { AgentManager } from './agent-manager.js'
 import type { LiveAgentRun } from './agent-runtime-types.js'
 
 const WORKSPACE_SHELL_SUFFIX = ':shell'
-const SHELL_LABEL_PATTERN = /^Shell (\d+)$/
+const WORKSPACE_SHELL_LABEL = 'Shell'
+const EXITED_SHELL_RETENTION_MS = 5000
 
 export const getWorkspaceShellAgentId = (workspaceId: string): string =>
   `${workspaceId}${WORKSPACE_SHELL_SUFFIX}`
@@ -42,6 +43,7 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
   const workspaceIdsByRunId = new Map<string, string>()
   const runIdsByWorkspaceId = new Map<string, string[]>()
   const startedAtByRunId = new Map<string, number>()
+  const exitCleanupTimersByRunId = new Map<string, ReturnType<typeof setTimeout>>()
 
   const requireManager = () => {
     if (!agentManager) throw new Error('Agent manager is required for workspace shell terminals')
@@ -63,6 +65,9 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
   }
 
   const detachRun = (runId: string) => {
+    const exitCleanupTimer = exitCleanupTimersByRunId.get(runId)
+    if (exitCleanupTimer) clearTimeout(exitCleanupTimer)
+    exitCleanupTimersByRunId.delete(runId)
     const workspaceId = workspaceIdsByRunId.get(runId)
     if (workspaceId) {
       const retained = (runIdsByWorkspaceId.get(workspaceId) ?? []).filter((id) => id !== runId)
@@ -81,17 +86,26 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
     runIdsByWorkspaceId.set(workspaceId, [...(runIdsByWorkspaceId.get(workspaceId) ?? []), runId])
   }
 
-  const nextLabel = (workspaceId: string) => {
-    const usedNumbers = new Set<number>()
-    for (const runId of runIdsByWorkspaceId.get(workspaceId) ?? []) {
-      const match = SHELL_LABEL_PATTERN.exec(labelsByRunId.get(runId) ?? '')
-      if (match) usedNumbers.add(Number(match[1]))
+  const forgetShellRun = (runId: string) => {
+    detachRun(runId)
+    try {
+      requireManager().removeRun(runId)
+    } catch {
+      // The PTY manager may have already dropped the run.
     }
-
-    let next = 1
-    while (usedNumbers.has(next)) next += 1
-    return `Shell ${next}`
   }
+
+  const handleShellExit = (runId: string) => {
+    if (!hasRun(runId) || exitCleanupTimersByRunId.has(runId)) return
+    const timer = setTimeout(() => {
+      exitCleanupTimersByRunId.delete(runId)
+      if (hasRun(runId)) forgetShellRun(runId)
+    }, EXITED_SHELL_RETENTION_MS)
+    timer.unref?.()
+    exitCleanupTimersByRunId.set(runId, timer)
+  }
+
+  const isListedRun = (run: LiveAgentRun) => run.status === 'starting' || run.status === 'running'
 
   const stopPtyRun = (runId: string) => {
     requireManager().stopRun(runId)
@@ -118,6 +132,8 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
       workspaceIdsByRunId.clear()
       startedAtByRunId.clear()
       labelsByRunId.clear()
+      for (const timer of exitCleanupTimersByRunId.values()) clearTimeout(timer)
+      exitCleanupTimersByRunId.clear()
     },
     closeRun(workspaceId: string, runId: string): boolean {
       if (workspaceIdsByRunId.get(runId) !== workspaceId) return false
@@ -143,6 +159,7 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
       return (runIdsByWorkspaceId.get(workspaceId) ?? []).flatMap((runId) => {
         try {
           const run = toLiveRun(runId)
+          if (!isListedRun(run)) return []
           return [
             {
               agent_id: getWorkspaceShellAgentId(workspaceId),
@@ -180,8 +197,9 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
           TERM: 'xterm-256color',
           TERM_PROGRAM: 'hive-shell',
         },
+        onExit: ({ runId }) => handleShellExit(runId),
       })
-      attachRun(workspace.id, run.runId, nextLabel(workspace.id), startedAt)
+      attachRun(workspace.id, run.runId, WORKSPACE_SHELL_LABEL, startedAt)
       return { ...run, startedAt }
     },
     stopRun(runId: string) {

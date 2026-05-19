@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -12,6 +12,7 @@ import { startTestServer } from '../helpers/test-server.js'
 import { getUiCookie } from '../helpers/ui-session.js'
 
 const tempDirs: string[] = []
+const restoreEnv: Array<[string, string | undefined]> = []
 
 const waitFor = async (
   assertion: () => void | Promise<void>,
@@ -122,8 +123,20 @@ const startAgent = async (
 
 afterEach(() => {
   vi.restoreAllMocks()
+  while (restoreEnv.length > 0) {
+    const [key, value] = restoreEnv.pop() ?? ['', undefined]
+    if (!key) continue
+    if (value === undefined) delete process.env[key]
+    else process.env[key] = value
+  }
   for (const dir of tempDirs.splice(0)) rmSync(dir, { force: true, recursive: true })
 })
+
+const setEnv = (key: string, value: string | undefined) => {
+  restoreEnv.push([key, process.env[key]])
+  if (value === undefined) delete process.env[key]
+  else process.env[key] = value
+}
 
 describe('terminal websocket server', () => {
   test('streams PTY output over the io socket', async () => {
@@ -335,6 +348,52 @@ describe('terminal websocket server', () => {
       const run = await startAgent(server.baseUrl, cookie, workspace.id, worker.id)
       const control = await openSocket(
         toWsUrl(server.baseUrl, `/ws/terminal/${run.runId}/control`),
+        cookie
+      )
+      const messages: Array<{ code: number | null; type: string }> = []
+
+      control.on('message', (chunk) => {
+        messages.push(JSON.parse(chunk.toString()) as { code: number | null; type: string })
+      })
+
+      await waitFor(() => {
+        expect(messages).toContainEqual({ type: 'exit', code: 0 })
+      })
+
+      control.close()
+    } finally {
+      await server.close()
+    }
+  })
+
+  test('workspace shell control socket receives an exit event when the shell exits', async () => {
+    const workspacePath = join(tmpdir(), `hive-terminal-shell-exit-${Date.now()}`)
+    mkdirSync(workspacePath, { recursive: true })
+    tempDirs.push(workspacePath)
+    const fakeShell = join(workspacePath, 'fake-shell')
+    writeFileSync(
+      fakeShell,
+      [
+        '#!/usr/bin/env node',
+        "process.stdout.write('shell ready\\n')",
+        'setTimeout(() => process.exit(0), 150)',
+      ].join('\n')
+    )
+    chmodSync(fakeShell, 0o755)
+    setEnv('SHELL', fakeShell)
+
+    const server = await startTestServer()
+    try {
+      const cookie = await getUiCookie(server.baseUrl)
+      const workspace = await createWorkspace(server.baseUrl, cookie, workspacePath)
+      const startResponse = await fetch(
+        `${server.baseUrl}/api/workspaces/${workspace.id}/shell/start`,
+        { method: 'POST', headers: { cookie } }
+      )
+      expect(startResponse.status).toBe(201)
+      const shell = (await startResponse.json()) as { run_id: string }
+      const control = await openSocket(
+        toWsUrl(server.baseUrl, `/ws/terminal/${shell.run_id}/control`),
         cookie
       )
       const messages: Array<{ code: number | null; type: string }> = []

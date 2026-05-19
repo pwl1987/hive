@@ -10,7 +10,7 @@ import type { WorkerActions } from '../../web/src/worker/useWorkerActions.js'
 
 const shellRun = vi.hoisted<TerminalRunSummary>(() => ({
   agent_id: 'ws-1:shell',
-  agent_name: 'Shell 1',
+  agent_name: 'Shell',
   run_id: 'run-shell-1',
   status: 'running',
 }))
@@ -67,7 +67,7 @@ describe('AppWorkspaceContent', () => {
     const onShellRunStarted = vi.fn()
     const inactiveRun: TerminalRunSummary = {
       agent_id: 'ws-2:shell',
-      agent_name: 'Shell 1',
+      agent_name: 'Shell',
       run_id: 'inactive-shell-run',
       status: 'running',
     }

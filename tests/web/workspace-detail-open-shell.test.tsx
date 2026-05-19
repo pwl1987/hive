@@ -43,7 +43,7 @@ const worker: TeamListItem = {
 
 const shellRun = (runId = 'shell-run-1', workspaceId = workspace.id): TerminalRunSummary => ({
   agent_id: `${workspaceId}:shell`,
-  agent_name: 'Shell 1',
+  agent_name: 'Shell',
   run_id: runId,
   status: 'running',
 })

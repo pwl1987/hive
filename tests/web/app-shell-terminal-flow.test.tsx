@@ -188,13 +188,13 @@ describe('app shell terminal flow with real server', () => {
 
     fireEvent.click(await screen.findByTestId('open-workspace-shell'))
     await waitFor(() => expect(shellStarts).toHaveLength(1))
-    expect(shellStarts[0]?.agent_name).toBe('Shell 1')
+    expect(shellStarts[0]?.agent_name).toBe('Shell')
     await waitForShellSlot(shellStarts[0]?.run_id ?? '')
 
     fireEvent.click(screen.getByTestId('terminal-tab-new-shell'))
     await waitFor(() => expect(shellStarts).toHaveLength(2))
 
-    expect(shellStarts[1]?.agent_name).toBe('Shell 2')
+    expect(shellStarts[1]?.agent_name).toBe('Shell')
     await waitForShellSlot(shellStarts[1]?.run_id ?? '')
   }, 10000)
 
@@ -206,7 +206,7 @@ describe('app shell terminal flow with real server', () => {
     fireEvent.click(terminalButton)
     await waitFor(() => expect(shellStarts).toHaveLength(1))
     const firstRunId = shellStarts[0]?.run_id ?? ''
-    expect(shellStarts[0]?.agent_name).toBe('Shell 1')
+    expect(shellStarts[0]?.agent_name).toBe('Shell')
     await waitForShellSlot(firstRunId)
 
     fireEvent.click(screen.getByTestId(`terminal-tab-close-shell:${firstRunId}`))
@@ -219,7 +219,7 @@ describe('app shell terminal flow with real server', () => {
     releaseDelayedDelete?.()
     await waitFor(() => expect(shellStarts).toHaveLength(2))
 
-    expect(shellStarts[1]?.agent_name).toBe('Shell 1')
+    expect(shellStarts[1]?.agent_name).toBe('Shell')
     expect(shellStarts[1]?.run_id).not.toBe(firstRunId)
     await waitForShellSlot(shellStarts[1]?.run_id ?? '')
   }, 10000)
@@ -236,7 +236,7 @@ describe('app shell terminal flow with real server', () => {
     await waitFor(() => expect(shellStarts).toHaveLength(2))
     const firstRunId = shellStarts[0]?.run_id ?? ''
     const secondRunId = shellStarts[1]?.run_id ?? ''
-    expect(shellStarts.map((run) => run.agent_name)).toEqual(['Shell 1', 'Shell 2'])
+    expect(shellStarts.map((run) => run.agent_name)).toEqual(['Shell', 'Shell'])
     await waitForShellSlot(secondRunId)
 
     fireEvent.click(screen.getByTestId(`terminal-tab-close-shell:${firstRunId}`))
@@ -249,7 +249,7 @@ describe('app shell terminal flow with real server', () => {
     releaseDelayedDelete?.()
     await waitFor(() => expect(shellStarts).toHaveLength(3))
 
-    expect(shellStarts[2]?.agent_name).toBe('Shell 1')
+    expect(shellStarts[2]?.agent_name).toBe('Shell')
     expect(shellStarts[2]?.run_id).not.toBe(firstRunId)
     expect(shellStarts[2]?.run_id).not.toBe(secondRunId)
     await waitForShellSlot(shellStarts[2]?.run_id ?? '')

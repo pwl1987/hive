@@ -110,7 +110,6 @@ export const useOptimisticTerminalRuns = (
 
       const existingTimer = timersRef.current.get(runId)
       if (existingTimer) window.clearTimeout(existingTimer)
-      if (isWorkspaceShellRun(run, targetWorkspaceId)) return
       const timer = window.setTimeout(() => {
         setOptimisticRunsByWorkspaceId((current) => ({
           ...current,
