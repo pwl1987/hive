@@ -67,6 +67,23 @@ export const useOptimisticTerminalRuns = (
     }))
   }, [])
 
+  useEffect(() => {
+    if (!workspaceId || actualRuns.length === 0) return
+    const actualRunIds = new Set(actualRuns.map((run) => run.run_id))
+    setOptimisticRunsByWorkspaceId((current) => {
+      const currentRuns = current[workspaceId] ?? []
+      const retained = currentRuns.filter((run) => {
+        if (!actualRunIds.has(run.run_id)) return true
+        const timer = timersRef.current.get(run.run_id)
+        if (timer) window.clearTimeout(timer)
+        timersRef.current.delete(run.run_id)
+        return false
+      })
+      if (retained.length === currentRuns.length) return current
+      return { ...current, [workspaceId]: retained }
+    })
+  }, [actualRuns, workspaceId])
+
   const recordOptimisticRun = useCallback(
     ({
       agentId,

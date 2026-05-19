@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 
 import type { TerminalRunSummary } from '../../web/src/api.js'
@@ -82,5 +82,37 @@ describe('useOptimisticTerminalRuns', () => {
 
     expect(result.current.optimisticRunsByWorkspaceId['ws-1']).toEqual([])
     expect(result.current.terminalRuns).toEqual([])
+  })
+
+  test('drops an optimistic shell run once polling observes the real run', async () => {
+    const shell = terminalRun('shell-run-1', 'ws-1:shell', 'Shell 1')
+    const { rerender, result } = renderHook(
+      ({ actualRuns }) => useOptimisticTerminalRuns('ws-1', actualRuns),
+      { initialProps: { actualRuns: [] as TerminalRunSummary[] } }
+    )
+
+    act(() => {
+      result.current.recordOptimisticRun({
+        agentId: shell.agent_id,
+        agentName: shell.agent_name,
+        runId: shell.run_id,
+        status: shell.status,
+        workspaceId: 'ws-1',
+      })
+    })
+    expect(result.current.optimisticRunsByWorkspaceId['ws-1']?.map((run) => run.run_id)).toEqual([
+      shell.run_id,
+    ])
+
+    rerender({ actualRuns: [shell] })
+    await waitFor(() => {
+      expect(result.current.optimisticRunsByWorkspaceId['ws-1']).toEqual([])
+    })
+    expect(result.current.terminalRuns).toEqual([shell])
+
+    rerender({ actualRuns: [] })
+    await waitFor(() => {
+      expect(result.current.terminalRuns).toEqual([])
+    })
   })
 })
