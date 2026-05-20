@@ -11,6 +11,7 @@ import { RuntimeOfflinePage } from './pwa/RuntimeOfflinePage.js'
 import { UpdateAvailableToast } from './pwa/UpdateAvailableToast.js'
 import { useShortcutAction } from './pwa/use-shortcut-action.js'
 import { Sidebar } from './sidebar/Sidebar.js'
+import { parseTaskMarkdown } from './tasks/task-markdown.js'
 import { useTasksFile } from './tasks/useTasksFile.js'
 import { useOptimisticTerminalRuns } from './terminal/useOptimisticTerminalRuns.js'
 import { useTerminalRuns } from './terminal/useTerminalRuns.js'
@@ -26,12 +27,6 @@ import { useWorkspaceWorkers } from './useWorkspaceWorkers.js'
 import { useFirstRunWizard } from './wizard/useFirstRunWizard.js'
 import { useWorkerActions } from './worker/useWorkerActions.js'
 import { OpenWorkspaceButton } from './workspace/OpenWorkspaceButton.js'
-
-// Task Graph/Blueprint was Hive's early first-class `.hive/tasks.md` planning surface.
-// Real usage has moved toward letting the Orchestrator agent plan in its own context,
-// so the primary UI entry is hidden while the drawer/API stay preserved for compatibility
-// and possible revival.
-const TASK_GRAPH_PRIMARY_ENTRY_ENABLED = false
 
 export const AppInner = () => {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[] | null>(null)
@@ -70,13 +65,13 @@ export const AppInner = () => {
   // interaction so fresh tabs still close cleanly, but every closure that
   // does fire the prompt now goes through it — including PWA Cmd-W.
   useBeforeUnloadGuard(true)
-  const taskGraphWorkspaceId =
-    TASK_GRAPH_PRIMARY_ENTRY_ENABLED && !demoMode ? (activeWorkspaceId ?? null) : null
   const tasksFile = useTasksFile(
-    taskGraphWorkspaceId,
-    TASK_GRAPH_PRIMARY_ENTRY_ENABLED && demoMode ? DEMO_TASKS_MD : undefined
+    demoMode ? null : (activeWorkspaceId ?? null),
+    demoMode ? DEMO_TASKS_MD : undefined
   )
-  const effectiveTaskGraphOpen = TASK_GRAPH_PRIMARY_ENTRY_ENABLED && taskGraphOpen
+  const openTaskCount = eff.effectiveActiveWorkspace
+    ? parseTaskMarkdown(tasksFile.content).filter((task) => !task.checked).length
+    : 0
   const workerActions = useWorkerActions({
     activeWorkspaceId,
     onWorkerDeleted: terms.forgetOptimisticAgent,
@@ -116,7 +111,10 @@ export const AppInner = () => {
     <>
       <MainLayout
         hideTopbarActions={!eff.effectiveActiveWorkspace}
+        onToggleTaskGraph={() => setTaskGraphOpen((value) => !value)}
+        openTaskCount={openTaskCount}
         topbarActions={<OpenWorkspaceButton workspace={eff.effectiveActiveWorkspace} />}
+        taskGraphOpen={taskGraphOpen}
         sidebar={
           <Sidebar
             activeWorkspaceId={eff.effectiveActiveWorkspaceId}
@@ -168,7 +166,7 @@ export const AppInner = () => {
           onCloseWizard={closeWizard}
           onCreateWorkspace={wsCreate.createNewWorkspace}
           onTryDemo={enableDemo}
-          taskGraphOpen={effectiveTaskGraphOpen}
+          taskGraphOpen={taskGraphOpen}
           tasksFile={tasksFile}
           workspacePath={eff.effectiveActiveWorkspace?.path ?? null}
           workers={activeWorkers}

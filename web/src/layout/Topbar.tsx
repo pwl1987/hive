@@ -1,8 +1,10 @@
+import { ListChecks } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import type { VersionInfo } from '../api.js'
 import { useI18n } from '../i18n.js'
 import { NotificationSettingsButton } from '../notifications/NotificationSettingsButton.js'
+import { Tooltip } from '../ui/Tooltip.js'
 import { useVersionInfo } from '../useVersionInfo.js'
 import { APP_VERSION } from '../version.js'
 import { LanguageToggle } from './LanguageToggle.js'
@@ -10,6 +12,9 @@ import { LanguageToggle } from './LanguageToggle.js'
 type TopbarProps = {
   actions?: ReactNode
   hideActions?: boolean
+  onToggleTaskGraph?: () => void
+  openTaskCount?: number
+  taskGraphOpen?: boolean
   version?: string
   versionInfo?: VersionInfo
 }
@@ -17,6 +22,9 @@ type TopbarProps = {
 export const Topbar = ({
   actions,
   hideActions = false,
+  onToggleTaskGraph,
+  openTaskCount = 0,
+  taskGraphOpen = false,
   version = APP_VERSION,
   versionInfo: providedVersionInfo,
 }: TopbarProps) => {
@@ -24,6 +32,12 @@ export const Topbar = ({
   const versionInfo = useVersionInfo(providedVersionInfo)
   const updateInfo =
     versionInfo?.updateAvailable && versionInfo.latestVersion !== version ? versionInfo : null
+  const hasOpenTasks = openTaskCount > 0
+  const taskGraphTooltip = taskGraphOpen
+    ? t('topbar.hideTodo')
+    : hasOpenTasks
+      ? t('topbar.todoOpen', { count: openTaskCount })
+      : t('topbar.showTodo')
   return (
     <header
       className="flex h-11 shrink-0 items-center px-4"
@@ -65,9 +79,23 @@ export const Topbar = ({
       {hideActions ? null : (
         <div className="flex items-center gap-1">
           {actions}
-          {/* Task Graph/Blueprint is intentionally hidden from the primary shell.
-              The dormant drawer/API remain behind TASK_GRAPH_PRIMARY_ENTRY_ENABLED
-              in app.tsx for existing `.hive/tasks.md` workspaces and possible revival. */}
+          {onToggleTaskGraph ? (
+            <Tooltip label={taskGraphTooltip}>
+              <button
+                type="button"
+                onClick={onToggleTaskGraph}
+                aria-pressed={taskGraphOpen}
+                aria-label={taskGraphTooltip}
+                data-has-tasks={hasOpenTasks ? 'true' : undefined}
+                className="flex h-7 cursor-pointer items-center gap-1 rounded border px-2 text-xs font-medium text-ter transition-colors hover:bg-3 hover:text-pri focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                data-testid="topbar-blueprint"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg-1)' }}
+              >
+                <ListChecks size={13} className={hasOpenTasks ? 'text-accent' : undefined} />
+                <span>{t('topbar.todo')}</span>
+              </button>
+            </Tooltip>
+          ) : null}
           <LanguageToggle />
           <NotificationSettingsButton />
         </div>

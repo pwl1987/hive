@@ -163,13 +163,14 @@ test('demo mode shows DEMO read-only badge and orch scrollback text', async () =
   expect(screen.getByTestId('demo-scrollback-demo-orch').textContent).toContain('team send alice')
 })
 
-test('demo mode keeps the dormant Blueprint entry hidden', async () => {
+test('demo mode surfaces the Todo entry in the Topbar', async () => {
   render(<App />)
   await screen.findByTestId('welcome-pane')
 
   fireEvent.click(screen.getByRole('button', { name: /try the demo/i }))
   expect(screen.getByTestId('demo-banner')).toBeInTheDocument()
 
-  expect(screen.queryByTestId('topbar-blueprint')).toBeNull()
-  expect(screen.queryByRole('button', { name: /toggle Todo/i })).toBeNull()
+  expect(screen.getByTestId('topbar-blueprint')).toBeInTheDocument()
+  fireEvent.click(screen.getByTestId('topbar-blueprint'))
+  expect(screen.getByTestId('task-graph-drawer')).toHaveAttribute('aria-hidden', 'false')
 })
