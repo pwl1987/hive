@@ -2,7 +2,7 @@
 
 All notable user-facing changes will be documented in this file.
 
-## 1.3.0 - 2026-05-19
+## 1.3.0 - 2026-05-20
 
 Installable Hive: turns the web shell into a real PWA so Chrome / Edge can
 launch it from a dock icon, in its own window, without a visible browser
@@ -24,6 +24,9 @@ chrome.
   activate`) instead of forcing a refresh. The Reload button stays disabled
   while any terminal run is still working so updates never interrupt an
   in-flight agent.
+- Routes service-worker auto-reloads through the same silent reload helper used
+  elsewhere in the app, so browser updates do not trip the close-confirmation
+  guard.
 - Replaces the workspace area with a dedicated `Hive runtime is not running`
   page when the initial bootstrap fails. The page pings `/api/version` every
   three seconds and reloads automatically once the daemon comes back; a manual
@@ -72,6 +75,9 @@ chrome.
   Cmd-W (Ctrl-W on Windows / Linux) closes the active tab; a "+" button in
   the tab strip starts a new shell. Start failures and shell-start failures
   now surface as toasts instead of inline modal/dialog banners.
+- Moves "Save as template" into the role-instructions toolbar in the Add Member
+  flow, keeping template actions closer to the prompt editor instead of adding
+  another standalone control in the dialog body.
 
 ## 1.2.0 - 2026-05-18
 
