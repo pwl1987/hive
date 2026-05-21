@@ -4,6 +4,7 @@ type TerminalLike = {
       type?: string
     }
   }
+  attachCustomWheelEventHandler?: (handler: (event: WheelEvent) => boolean) => void
   modes?: {
     applicationCursorKeysMode?: boolean
     mouseTrackingMode?: string
@@ -33,7 +34,9 @@ const profileSequence = (
   profile: TerminalWheelInputProfile,
   direction: 'down' | 'up'
 ) => {
-  if (profile === 'opencode') return direction === 'up' ? '\u0015' : '\u0004'
+  if (profile === 'opencode') {
+    return direction === 'up' ? '\u001b[5~' : '\u001b[6~'
+  }
   return arrowSequence(terminal.modes?.applicationCursorKeysMode, direction)
 }
 
@@ -48,7 +51,11 @@ export const createAlternateScreenWheelInputResolver = (
       partialLines = 0
       return { handled: false, input: null }
     }
-    if (terminal.modes?.mouseTrackingMode && terminal.modes.mouseTrackingMode !== 'none') {
+    if (
+      profile !== 'opencode' &&
+      terminal.modes?.mouseTrackingMode &&
+      terminal.modes.mouseTrackingMode !== 'none'
+    ) {
       partialLines = 0
       return { handled: false, input: null }
     }
@@ -95,13 +102,23 @@ export const attachAlternateScreenWheelFallback = ({
 }): (() => void) => {
   const resolveWheelInput = createAlternateScreenWheelInputResolver(terminal, profile)
 
-  const onWheel = (event: WheelEvent) => {
+  const handleWheel = (event: WheelEvent): boolean => {
     const { handled, input } = resolveWheelInput(event)
-    if (!handled) return
+    if (!handled) return true
     event.preventDefault()
     event.stopPropagation()
-    event.stopImmediatePropagation()
     if (input) sendInput(input)
+    return false
+  }
+
+  if (typeof terminal.attachCustomWheelEventHandler === 'function') {
+    terminal.attachCustomWheelEventHandler(handleWheel)
+    return () => {}
+  }
+
+  const onWheel = (event: WheelEvent) => {
+    if (handleWheel(event)) return
+    event.stopImmediatePropagation()
   }
 
   element.addEventListener('wheel', onWheel, { capture: true, passive: false })
