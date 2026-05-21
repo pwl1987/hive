@@ -25,6 +25,10 @@
 
 > Hive 是本机优先的工具，只监听 `127.0.0.1`，面向已经在用 CLI Agent 的人。最新稳定版本见 [npm](https://www.npmjs.com/package/@tt-a1i/hive)，上面的 badge 会指向它。
 
+<p align="center">
+  <img src="./assets/hive-team-view.png" alt="Hive 工作台：4 个 CLI Agent 团队，Orchestrator 派单、Worker 各自开工" />
+</p>
+
 ## 为什么需要 Hive
 
 CLI Agent 各自都很强，但同时管几个就有点别扭：

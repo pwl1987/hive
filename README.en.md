@@ -33,6 +33,10 @@ English · [简体中文](./README.md)
 > [npm](https://www.npmjs.com/package/@tt-a1i/hive) and the badge above resolves
 > to it.
 
+<p align="center">
+  <img src="./assets/hive-team-view.png" alt="Hive workbench with a 4-agent team — orchestrator dispatching while workers run" />
+</p>
+
 ## Why Hive
 
 CLI agents are powerful, but coordinating several of them manually is
