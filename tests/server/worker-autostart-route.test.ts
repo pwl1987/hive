@@ -193,6 +193,76 @@ describe('POST /api/workspaces/:workspaceId/workers autostart', () => {
     if (body.agent_start.run_id) server.store.stopAgentRun(body.agent_start.run_id)
   })
 
+  test('custom OpenCode startup command exposes the OpenCode terminal input profile', async () => {
+    const binDir = mkdtempSync(join(tmpdir(), 'hive-worker-opencode-profile-bin-'))
+    const dataDir = mkdtempSync(join(tmpdir(), 'hive-worker-opencode-profile-'))
+    tempDirs.push(binDir, dataDir)
+    const shellCommandFile = join(dataDir, 'shell-command.txt')
+    const fakeShell = join(binDir, 'fake-zsh')
+    writeFileSync(
+      fakeShell,
+      [
+        '#!/bin/sh',
+        'last_arg=""',
+        'for arg in "$@"; do last_arg="$arg"; done',
+        `printf '%s\\n' "$last_arg" > "${shellCommandFile}"`,
+        'sleep 60',
+      ].join('\n')
+    )
+    chmodSync(fakeShell, 0o755)
+    setEnv('SHELL', fakeShell)
+
+    const server = await startTestServer({ dataDir })
+    servers.push(server)
+    const cookie = await getUiCookie(server.baseUrl)
+    const workspace = await createWorkspace(server.baseUrl, cookie)
+
+    const response = await fetch(`${server.baseUrl}/api/workspaces/${workspace.id}/workers`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({
+        autostart: true,
+        command_preset_id: 'opencode',
+        name: 'OpenCodeWorker',
+        role: 'coder',
+        startup_command: 'opencode --continue',
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    const body = (await response.json()) as {
+      agent_start: { ok: boolean; error: string | null; run_id: string | null }
+      id: string
+    }
+    expect(body.agent_start).toMatchObject({ error: null, ok: true })
+    expect(server.store.peekAgentLaunchConfig(workspace.id, body.id)).toMatchObject({
+      command: fakeShell,
+      commandPresetId: null,
+      interactiveCommand: 'opencode',
+      presetAugmentationDisabled: true,
+    })
+    await waitFor(() => {
+      expect(readFileSync(shellCommandFile, 'utf8')).toBe('opencode --continue\n')
+    })
+
+    const runsResponse = await fetch(`${server.baseUrl}/api/ui/workspaces/${workspace.id}/runs`, {
+      headers: { cookie },
+    })
+    expect(runsResponse.status).toBe(200)
+    const runs = (await runsResponse.json()) as Array<{
+      run_id: string
+      terminal_input_profile: string
+    }>
+    expect(runs).toContainEqual(
+      expect.objectContaining({
+        run_id: body.agent_start.run_id,
+        terminal_input_profile: 'opencode',
+      })
+    )
+
+    if (body.agent_start.run_id) server.store.stopAgentRun(body.agent_start.run_id)
+  })
+
   test('custom worker startup command reports the missing executable, not the shell', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'hive-worker-custom-start-missing-'))
     tempDirs.push(dataDir)

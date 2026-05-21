@@ -14,6 +14,7 @@ import type {
   ReportTaskResult,
   StatusTaskInput,
 } from './team-operations.js'
+import type { TerminalRunSummary } from './terminal-input-profile.js'
 import type { WorkerInput, WorkspaceRecord } from './workspace-store.js'
 
 interface RuntimeStore {
@@ -47,12 +48,7 @@ interface RuntimeStore {
   getWorker: (workspaceId: string, workerId: string) => AgentSummary
   getAgent: (workspaceId: string, agentId: string) => AgentSummary
   getPtyOutputBus: () => PtyOutputBus
-  listTerminalRuns: (workspaceId: string) => Array<{
-    agent_id: string
-    agent_name: string
-    run_id: string
-    status: string
-  }>
+  listTerminalRuns: (workspaceId: string) => TerminalRunSummary[]
   closeWorkspaceShell: (workspaceId: string, runId: string) => boolean
   startWorkspaceShell: (workspaceId: string) => Promise<LiveAgentRun>
   configureAgentLaunch: (

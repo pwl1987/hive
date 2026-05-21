@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { TerminalView } from '../../web/src/terminal/TerminalView.js'
 
 let latestCustomKeyHandler: ((event: KeyboardEvent) => boolean) | undefined
 let terminalWrites: string[] = []
+let terminalBufferType: 'alternate' | 'normal' = 'normal'
+let terminalMouseTrackingMode: 'any' | 'drag' | 'none' | 'vt200' | 'x10' = 'none'
+let terminalApplicationCursorKeysMode = false
 
 class MockWebSocket {
   static instances: MockWebSocket[] = []
@@ -50,6 +53,15 @@ vi.mock('@xterm/xterm', () => ({
     cols = 132
     rows = 43
     unicode = { activeVersion: '' }
+    get buffer() {
+      return { active: { type: terminalBufferType } }
+    }
+    get modes() {
+      return {
+        applicationCursorKeysMode: terminalApplicationCursorKeysMode,
+        mouseTrackingMode: terminalMouseTrackingMode,
+      }
+    }
     attachCustomKeyEventHandler(handler: (event: KeyboardEvent) => boolean) {
       latestCustomKeyHandler = handler
     }
@@ -79,6 +91,9 @@ afterEach(() => {
   MockResizeObserver.instances = []
   latestCustomKeyHandler = undefined
   terminalWrites = []
+  terminalApplicationCursorKeysMode = false
+  terminalBufferType = 'normal'
+  terminalMouseTrackingMode = 'none'
   vi.unstubAllGlobals()
 })
 
@@ -213,5 +228,191 @@ describe('TerminalView', () => {
     expect(keydownHandled).toBe(false)
     expect(keypressHandled).toBe(false)
     expect(MockWebSocket.instances[0]?.sent).toEqual(['\u001b[13;2u'])
+  })
+
+  test('falls back to arrow-key wheel input for alternate-screen TUIs without mouse tracking', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-alt')
+
+    render(<TerminalView runId="run-wheel-alt" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-alt"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    fireEvent.wheel(terminal, { deltaY: 120 })
+    fireEvent.wheel(terminal, { deltaY: -120 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual(['\u001b[B', '\u001b[A'])
+  })
+
+  test('maps OpenCode wheel input to the message viewport scroll keys', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-opencode')
+
+    render(<TerminalView inputProfile="opencode" runId="run-wheel-opencode" title="OpenCode" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-opencode"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    fireEvent.wheel(terminal, { deltaY: 120 })
+    fireEvent.wheel(terminal, { deltaY: -120 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual(['\u0004', '\u0015'])
+  })
+
+  test('uses application cursor arrow sequences for alternate-screen wheel fallback', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalApplicationCursorKeysMode = true
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-app-cursor')
+
+    render(<TerminalView runId="run-wheel-app-cursor" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-app-cursor"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    fireEvent.wheel(terminal, { deltaMode: WheelEvent.DOM_DELTA_LINE, deltaY: 1 })
+    fireEvent.wheel(terminal, { deltaMode: WheelEvent.DOM_DELTA_LINE, deltaY: -1 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual(['\u001bOB', '\u001bOA'])
+  })
+
+  test('does not amplify small trackpad wheel deltas into one input per event', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-trackpad')
+
+    render(<TerminalView runId="run-wheel-trackpad" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-trackpad"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    for (let index = 0; index < 5; index++) {
+      fireEvent.wheel(terminal, { deltaMode: WheelEvent.DOM_DELTA_PIXEL, deltaY: 10 })
+    }
+    expect(MockWebSocket.instances[0]?.sent).toEqual([])
+
+    fireEvent.wheel(terminal, { deltaMode: WheelEvent.DOM_DELTA_PIXEL, deltaY: 10 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual(['\u001b[B'])
+  })
+
+  test('consumes alternate-screen fallback wheel events before page scroll handlers run', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-consume')
+
+    render(<TerminalView runId="run-wheel-consume" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-consume"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+    let bubbled = false
+    terminal.parentElement?.addEventListener('wheel', () => {
+      bubbled = true
+    })
+
+    const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 })
+    terminal.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(bubbled).toBe(false)
+    expect(MockWebSocket.instances[0]?.sent).toEqual(['\u001b[B'])
+  })
+
+  test('consumes small alternate-screen trackpad wheel deltas even before emitting input', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    addPortalSlot('run-wheel-small-consume')
+
+    render(<TerminalView runId="run-wheel-small-consume" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-small-consume"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+    let bubbled = false
+    terminal.parentElement?.addEventListener('wheel', () => {
+      bubbled = true
+    })
+
+    const event = new WheelEvent('wheel', {
+      bubbles: true,
+      cancelable: true,
+      deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+      deltaY: 10,
+    })
+    terminal.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(bubbled).toBe(false)
+    expect(MockWebSocket.instances[0]?.sent).toEqual([])
+  })
+
+  test('keeps normal scrollback wheel events out of PTY input', async () => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'normal'
+    addPortalSlot('run-wheel-normal')
+
+    render(<TerminalView runId="run-wheel-normal" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-normal"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    fireEvent.wheel(terminal, { deltaY: 120 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual([])
+  })
+
+  test.each([
+    'any',
+    'drag',
+    'vt200',
+    'x10',
+  ] as const)('does not duplicate xterm %s mouse tracking wheel events', async (mouseTrackingMode) => {
+    vi.stubGlobal('WebSocket', MockWebSocket as never)
+    terminalBufferType = 'alternate'
+    terminalMouseTrackingMode = mouseTrackingMode
+    addPortalSlot('run-wheel-mouse')
+
+    render(<TerminalView runId="run-wheel-mouse" title="Alice" />)
+
+    const terminal = await waitFor(() => {
+      const node = document.querySelector('[data-testid="terminal-run-wheel-mouse"]')
+      expect(MockWebSocket.instances[0]?.readyState).toBe(1)
+      expect(node).not.toBeNull()
+      return node as HTMLElement
+    })
+
+    fireEvent.wheel(terminal, { deltaY: 120 })
+
+    expect(MockWebSocket.instances[0]?.sent).toEqual([])
   })
 })

@@ -109,8 +109,8 @@ export const WorkersPane = ({
         }}
       >
         <div className="flex items-center gap-2">
-          <span className="font-medium text-pri">{t('worker.teamMembers')}</span>
-          <span className="mono rounded bg-3 px-1.5 py-0.5 text-xs text-sec">{workers.length}</span>
+          <span className="text-base font-semibold text-pri">{t('worker.teamMembers')}</span>
+          <span className="mono rounded bg-3 px-2 py-0.5 text-sm text-sec">{workers.length}</span>
           <div className="flex-1" />
           {shellTerminalAvailable ? (
             <button

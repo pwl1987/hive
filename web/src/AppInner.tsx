@@ -145,6 +145,7 @@ export const AppInner = () => {
                 agentName: run.agent_name,
                 runId: run.run_id,
                 status: run.status,
+                terminalInputProfile: run.terminal_input_profile ?? 'default',
                 workspaceId,
               })
             }

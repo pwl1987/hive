@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { isWorkspaceShellRun, type TerminalRunSummary } from '../api.js'
+import { isWorkspaceShellRun, type TerminalInputProfile, type TerminalRunSummary } from '../api.js'
 
 const OPTIMISTIC_RUN_TTL_MS = 3000
 
@@ -11,6 +11,7 @@ interface OptimisticRunInput {
   agentName: string
   runId: string
   status?: string
+  terminalInputProfile?: TerminalInputProfile
   workspaceId: string
 }
 
@@ -90,6 +91,7 @@ export const useOptimisticTerminalRuns = (
       agentName,
       runId,
       status = 'starting',
+      terminalInputProfile = 'default',
       workspaceId: targetWorkspaceId,
     }: OptimisticRunInput) => {
       const run: TerminalRunSummary = {
@@ -97,6 +99,7 @@ export const useOptimisticTerminalRuns = (
         agent_name: agentName,
         run_id: runId,
         status,
+        terminal_input_profile: terminalInputProfile,
       }
       setOptimisticRunsByWorkspaceId((current) => {
         const recordsWorkspaceShell = isWorkspaceShellRun(run, targetWorkspaceId)

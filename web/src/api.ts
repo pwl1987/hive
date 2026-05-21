@@ -302,11 +302,14 @@ export const listCommandPresets = async (): Promise<CommandPreset[]> => {
   }))
 }
 
+export type TerminalInputProfile = 'default' | 'opencode'
+
 export interface TerminalRunSummary {
   agent_id: string
   agent_name: string
   run_id: string
   status: string
+  terminal_input_profile?: TerminalInputProfile
 }
 
 export const workspaceShellAgentId = (workspaceId: string): string => `${workspaceId}:shell`

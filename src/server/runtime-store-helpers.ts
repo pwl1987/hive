@@ -13,6 +13,7 @@ import { createSettingsStore } from './settings-store.js'
 import { createTasksFileService } from './tasks-file.js'
 import { createTasksFileWatcher } from './tasks-file-watcher.js'
 import { createTeamOperations } from './team-operations.js'
+import { resolveTerminalInputProfile } from './terminal-input-profile.js'
 import { createUiAuth } from './ui-auth.js'
 import { createWorkerOutputTracker, type WorkerOutputTracker } from './worker-output-tracker.js'
 import { createWorkspaceShellRuntime } from './workspace-shell-runtime.js'
@@ -231,8 +232,15 @@ export const createRuntimeStoreLifecycle = ({
       ...services.workspaceStore.getWorkspaceSnapshot(workspaceId).agents.flatMap((agent) => {
         const run = services.agentRuntime.getActiveRunByAgentId(workspaceId, agent.id)
         if (!run) return []
+        const launchConfig = services.agentRuntime.peekAgentLaunchConfig(workspaceId, agent.id)
         return [
-          { agent_id: agent.id, agent_name: agent.name, run_id: run.runId, status: run.status },
+          {
+            agent_id: agent.id,
+            agent_name: agent.name,
+            run_id: run.runId,
+            status: run.status,
+            terminal_input_profile: resolveTerminalInputProfile(launchConfig),
+          },
         ]
       }),
       ...services.shellRuntime.listTerminalRuns(workspaceId),

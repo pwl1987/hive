@@ -166,6 +166,7 @@ export const createWorkspaceShellRuntime = (agentManager: AgentManager | undefin
               agent_name: labelsByRunId.get(runId) ?? 'Shell',
               run_id: run.runId,
               status: run.status,
+              terminal_input_profile: 'default' as const,
             },
           ]
         } catch {

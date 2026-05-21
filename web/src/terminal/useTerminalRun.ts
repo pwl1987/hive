@@ -4,8 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 
 import { resolveTerminalShortcut } from './shortcuts.js'
 import { createTerminalClient } from './terminal-client.js'
+import {
+  attachAlternateScreenWheelFallback,
+  type TerminalWheelInputProfile,
+} from './wheelFallback.js'
 
-export const useTerminalRun = (runId: string) => {
+export const useTerminalRun = (
+  runId: string,
+  inputProfile: TerminalWheelInputProfile = 'default'
+) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<'connecting' | 'running' | 'stopped'>('connecting')
@@ -21,6 +28,7 @@ export const useTerminalRun = (runId: string) => {
     let fitAddon: XtermFitAddon | undefined
     let resizeObserver: ResizeObserver | undefined
     let resizeTimer: number | undefined
+    let wheelFallbackDispose: (() => void) | undefined
     let helperTextarea: HTMLTextAreaElement | null = null
     let onCompositionStart: ((event: Event) => void) | undefined
     let onCompositionEnd: ((event: Event) => void) | undefined
@@ -68,6 +76,12 @@ export const useTerminalRun = (runId: string) => {
         nextFitAddon.fit()
         terminal = nextTerminal
         fitAddon = nextFitAddon
+        wheelFallbackDispose = attachAlternateScreenWheelFallback({
+          element: containerRef.current,
+          profile: inputProfile,
+          sendInput: (chunk) => client?.sendInput(chunk),
+          terminal: nextTerminal,
+        })
 
         try {
           const webglAddon = new webglModule.WebglAddon()
@@ -192,6 +206,7 @@ export const useTerminalRun = (runId: string) => {
       if (onWindowResize) window.removeEventListener('resize', onWindowResize)
       resizeObserver?.disconnect()
       if (resizeTimer) window.clearTimeout(resizeTimer)
+      wheelFallbackDispose?.()
       if (helperTextarea && onCompositionStart) {
         helperTextarea.removeEventListener('compositionstart', onCompositionStart, {
           capture: true,
@@ -207,7 +222,7 @@ export const useTerminalRun = (runId: string) => {
       terminal?.dispose()
       fitAddon?.dispose()
     }
-  }, [runId])
+  }, [runId, inputProfile])
 
   return { containerRef, error, status }
 }

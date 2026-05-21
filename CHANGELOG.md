@@ -2,6 +2,25 @@
 
 All notable user-facing changes will be documented in this file.
 
+## 1.3.1 - 2026-05-21
+
+OpenCode terminal scrolling and small UI polish.
+
+- Restores the Task Graph topbar entry so the graph view is available again
+  from the main shell.
+- Updates generated worker names to use localized, role-scoped historical
+  figure name pools, making Chinese and English workspaces feel less generic.
+- Fixes OpenCode TUI mouse-wheel scrolling inside Hive terminal panels. Hive now
+  tags each terminal run with an input profile and maps OpenCode wheel events to
+  the keys OpenCode's message viewport actually handles (`Ctrl+D` / `Ctrl+U`),
+  while leaving other alternate-screen TUIs on the existing arrow-key fallback.
+- Preserves that OpenCode profile when the user selects the OpenCode preset but
+  starts it through a custom startup command such as `opencode --continue`.
+- Keeps workspace shell terminals on the default input profile.
+- Enlarges the Team Members header count for better readability.
+- Documents that npm's `prebuild-install@7.1.3` deprecation warning comes from
+  the upstream native-binary installer chain and is safe to ignore.
+
 ## 1.3.0 - 2026-05-20
 
 Installable Hive: turns the web shell into a real PWA so Chrome / Edge can

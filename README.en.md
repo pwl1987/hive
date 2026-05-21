@@ -240,6 +240,11 @@ Hive depends on `node-pty` and `better-sqlite3`, which use native binaries. Use
 Node.js 22+, keep your package manager cache clean, and verify your platform
 build tools are available.
 
+If npm prints a deprecated warning for `prebuild-install@7.1.3`, it is safe to
+ignore. The warning comes from `better-sqlite3`'s native binary download chain;
+it is an upstream installer maintenance notice, not a Hive install failure, and
+does not affect runtime behavior.
+
 **Folder picker does not open on Linux**
 
 Install `zenity`, or paste the workspace path manually.

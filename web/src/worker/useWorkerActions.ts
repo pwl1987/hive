@@ -1,7 +1,13 @@
 import { useCallback } from 'react'
 
 import type { TeamListItem, WorkerRole } from '../../../src/shared/types.js'
-import { createWorker, deleteWorker, startAgentRun, stopAgentRun } from '../api.js'
+import {
+  createWorker,
+  deleteWorker,
+  startAgentRun,
+  stopAgentRun,
+  type TerminalInputProfile,
+} from '../api.js'
 
 const upsertWorker = (workers: TeamListItem[], worker: TeamListItem): TeamListItem[] => {
   const existingIndex = workers.findIndex((item) => item.id === worker.id)
@@ -16,6 +22,7 @@ interface UseWorkerActionsInput {
     agentId: string
     agentName: string
     runId: string
+    terminalInputProfile?: TerminalInputProfile
     workspaceId: string
   }) => void
   setWorkersByWorkspaceId: React.Dispatch<React.SetStateAction<Record<string, TeamListItem[]>>>
@@ -66,6 +73,7 @@ export const useWorkerActions = ({
           agentId: result.worker.id,
           agentName: result.worker.name,
           runId: result.agentStart.runId,
+          terminalInputProfile: commandPresetId === 'opencode' ? 'opencode' : 'default',
           workspaceId: activeWorkspaceId,
         })
       }
