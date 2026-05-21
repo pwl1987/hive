@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -36,6 +37,53 @@ const waitFor = async (
 }
 
 describe('hive cli end to end', () => {
+  test('CLI prints a friendly message when the requested port is already in use', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'hive-port-in-use-'))
+    tempDirs.push(dataDir)
+    const occupiedServer = createServer()
+    await new Promise<void>((resolve) => occupiedServer.listen(0, '127.0.0.1', () => resolve()))
+    const address = occupiedServer.address()
+    if (!address || typeof address === 'string') {
+      throw new Error('occupied server did not bind to an inet port')
+    }
+
+    const modulePath = new URL('../../src/cli/hive.ts', import.meta.url)
+    const { spawn } = await import('node:child_process')
+    const processHandle = spawn(
+      process.execPath,
+      ['--import', 'tsx', modulePath.pathname, '--port', String(address.port)],
+      {
+        env: { ...process.env, HIVE_DATA_DIR: dataDir },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    )
+    let stderr = ''
+    processHandle.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+
+    try {
+      const exitCode = await new Promise<number | null>((resolve) => {
+        processHandle.once('exit', (code) => resolve(code))
+      })
+
+      expect(exitCode).toBe(1)
+      expect(stderr).toContain(
+        `Hive could not start because port ${address.port} is already in use.`
+      )
+      expect(stderr).toContain(`http://127.0.0.1:${address.port}`)
+      expect(stderr).toContain(`hive --port ${address.port + 1}`)
+      expect(stderr).not.toContain('at Server.setupListenHandle')
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        occupiedServer.close((error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      })
+    }
+  })
+
   test('CLI leaves persisted launch configs stopped on runtime restart', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'hive-restart-stopped-'))
     const workspacePath = join(dataDir, 'workspace')
