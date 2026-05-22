@@ -2,7 +2,7 @@
   "source": {
     "repo": "msitarzewski/agency-agents",
     "commit": "783f6a72bfd7f3135700ac273c619d92821b419a",
-    "fetched_at": "2026-05-22T01:26:03.407Z"
+    "fetched_at": "2026-05-22T10:32:53.447Z"
   },
   "language": "en",
   "categories": [
@@ -255,7 +255,7 @@
       "description": "Full-stack integration expert specializing in the Feishu (Lark) Open Platform — proficient in Feishu bots, mini programs, approval workflows, Bitable (multidimensional spreadsheets), interactive message cards, Webhooks, SSO authentication, and workflow automation, building enterprise-grade collaboration and automation solutions within the Feishu ecosystem.",
       "emoji": "🔗",
       "color": "blue",
-      "vibe": "Builds enterprise integrations on the Feishu (Lark) platform — bots, approvals, data sync, and SSO — so your team's workflows run on autopilot."
+      "vibe": null
     },
     {
       "path": "engineering/engineering-filament-optimization-specialist.md",
@@ -1254,7 +1254,7 @@
       "description": "Expert in enterprise training system design and curriculum development — proficient in training needs analysis, instructional design methodology, blended learning program design, internal trainer development, leadership programs, and training effectiveness evaluation and continuous optimization.",
       "emoji": "📚",
       "color": "orange",
-      "vibe": "Designs training programs that drive real behavior change — from needs analysis to Kirkpatrick Level 3 evaluation — because good training is measured by what learners do, not what instructors say."
+      "vibe": null
     },
     {
       "path": "specialized/customer-service.md",
@@ -1281,7 +1281,7 @@
       "description": "Presales expert for China's government digital transformation market (ToG), proficient in policy interpretation, solution design, bid document preparation, POC validation, compliance requirements (classified protection/cryptographic assessment/Xinchuang domestic IT), and stakeholder management — helping technical teams efficiently win government IT projects.",
       "emoji": "🏛️",
       "color": "#8B0000",
-      "vibe": "Navigates the Chinese government IT procurement maze — from policy signals to winning bids — so your team lands digital transformation projects."
+      "vibe": null
     },
     {
       "path": "specialized/healthcare-customer-service.md",
@@ -1299,7 +1299,7 @@
       "description": "Expert in healthcare marketing compliance in China, proficient in the Advertising Law, Medical Advertisement Management Measures, Drug Administration Law, and related regulations — covering pharmaceuticals, medical devices, medical aesthetics, health supplements, and internet healthcare across content review, risk control, platform rule interpretation, and patient privacy protection, helping enterprises conduct effective health marketing within legal boundaries.",
       "emoji": "⚕️",
       "color": "#2E8B57",
-      "vibe": "Keeps your healthcare marketing legal in China's tightly regulated landscape — reviewing content, flagging violations, and finding creative space within compliance boundaries."
+      "vibe": null
     },
     {
       "path": "specialized/hospitality-guest-services.md",
@@ -1308,7 +1308,7 @@
       "description": "Comprehensive hospitality guest services specialist for hotels, resorts, restaurants, and event venues — covering reservations, check-in/check-out, concierge services, guest complaint resolution, loyalty program management, and post-stay follow-up to deliver exceptional guest experiences that drive loyalty and revenue",
       "emoji": "🏨",
       "color": "teal",
-      "vibe": "Hospitality is not a transaction — it's a feeling. Every guest interaction is an opportunity to create a memory, earn a return visit, and generate a five-star review."
+      "vibe": null
     },
     {
       "path": "specialized/hr-onboarding.md",
@@ -1344,7 +1344,7 @@
       "description": "Comprehensive legal billing and time tracking specialist for accurate time capture, invoice generation, billing narrative writing, collections management, trust account compliance, and billing analysis — maximizing revenue recovery while maintaining client relationships and ethical compliance across any firm size or billing model",
       "emoji": "⏱️",
       "color": "green",
-      "vibe": "Every six minutes of unbilled time is money left on the table. Every unclear billing narrative is a client dispute waiting to happen. Capture it all. Describe it clearly. Collect it professionally."
+      "vibe": null
     },
     {
       "path": "specialized/legal-client-intake.md",
@@ -1353,7 +1353,7 @@
       "description": "Comprehensive legal client intake specialist for qualifying prospects, collecting case information, scheduling consultations, managing conflict checks, and delivering attorney-ready intake summaries across any practice area and firm size",
       "emoji": "📋",
       "color": "blue",
-      "vibe": "The first conversation with a potential client sets the tone for the entire attorney-client relationship. Get it right — warm, professional, and thorough — from the very first touch."
+      "vibe": null
     },
     {
       "path": "specialized/legal-document-review.md",
@@ -1371,7 +1371,7 @@
       "description": "Comprehensive loan officer assistant for mortgage and lending professionals — covering borrower intake, pre-qualification, document collection, pipeline management, compliance tracking, rate quoting, and closing coordination across residential, commercial, and consumer lending",
       "emoji": "🏦",
       "color": "blue",
-      "vibe": "Every loan is someone's dream — a home, a business, a fresh start. Move it through the pipeline with precision, compliance, and genuine care for the person behind the application."
+      "vibe": null
     },
     {
       "path": "specialized/lsp-index-engineer.md",
@@ -1389,7 +1389,7 @@
       "description": "Comprehensive real estate agent assistant for buyer representation, seller representation, listing management, offer negotiation, transaction coordination, and closing support — delivering a world-class client experience from first showing to final closing across residential and investment real estate",
       "emoji": "🏠",
       "color": "teal",
-      "vibe": "Every transaction is someone's biggest financial decision. Every client deserves an agent who is organized, responsive, and genuinely invested in their outcome — not just the commission check."
+      "vibe": null
     },
     {
       "path": "specialized/recruitment-specialist.md",
@@ -1416,7 +1416,7 @@
       "description": "Comprehensive retail customer returns specialist for processing returns, exchanges, and refunds across in-store, online, and omnichannel retail — handling policy enforcement, fraud prevention, customer retention, vendor returns, and returns analytics to maximize recovery while preserving customer loyalty",
       "emoji": "🛒",
       "color": "amber",
-      "vibe": "A return is not a failure — it's an opportunity. Handle it with speed, fairness, and genuine care, and you'll turn a disappointed customer into a loyal one."
+      "vibe": null
     },
     {
       "path": "specialized/sales-data-extraction-agent.md",
@@ -1542,7 +1542,7 @@
       "description": "Full-spectrum study abroad planning expert covering the US, UK, Canada, Australia, Europe, Hong Kong, and Singapore — proficient in undergraduate, master's, and PhD application strategy, school selection, essay coaching, profile enhancement, standardized test planning, visa preparation, and overseas life adaptation, helping Chinese students craft personalized end-to-end study abroad plans.",
       "emoji": "🎓",
       "color": "#1B4D3E",
-      "vibe": "Guides Chinese students through the entire study abroad journey — from school selection and essays to visas — with data-driven advice and zero anxiety selling."
+      "vibe": null
     },
     {
       "path": "specialized/supply-chain-strategist.md",
@@ -1551,7 +1551,7 @@
       "description": "Expert supply chain management and procurement strategy specialist — skilled in supplier development, strategic sourcing, quality control, and supply chain digitalization. Grounded in China's manufacturing ecosystem, helps companies build efficient, resilient, and sustainable supply chains.",
       "emoji": "🔗",
       "color": "blue",
-      "vibe": "Builds your procurement engine and supply chain resilience across China's manufacturing ecosystem, from supplier sourcing to risk management."
+      "vibe": null
     },
     {
       "path": "support/support-analytics-reporter.md",

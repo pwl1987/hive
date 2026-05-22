@@ -39,3 +39,44 @@ export const localizeMarketplaceCategory = (category: string, language: UiLangua
   if (!entry) return prettifyRaw(category)
   return entry[language]
 }
+
+// Upstream emits categories alphabetically by the EN kebab key, which renders
+// as a random-looking order to ZH readers (学术 → 设计 → 工程 → 金融 …). For
+// ZH, sort by domain affinity so engineering-flavored categories cluster at
+// the top, marketing/sales/finance in the middle, and academic / long-tail at
+// the bottom. EN stays alphabetical (it reads fine).
+const ZH_CATEGORY_ORDER: readonly string[] = [
+  'engineering',
+  'testing',
+  'product',
+  'design',
+  'project-management',
+  'integrations',
+  'specialized',
+  'marketing',
+  'paid-media',
+  'sales',
+  'finance',
+  'legal',
+  'hr',
+  'supply-chain',
+  'support',
+  'academic',
+  'game-development',
+  'spatial-computing',
+  'misc',
+]
+
+export const sortCategoriesForDisplay = (
+  categories: readonly string[],
+  language: UiLanguage
+): readonly string[] => {
+  if (language !== 'zh') return categories
+  const orderIndex = new Map(ZH_CATEGORY_ORDER.map((key, index) => [key, index]))
+  return [...categories].sort((a, b) => {
+    const ai = orderIndex.get(a) ?? Number.POSITIVE_INFINITY
+    const bi = orderIndex.get(b) ?? Number.POSITIVE_INFINITY
+    if (ai !== bi) return ai - bi
+    return a.localeCompare(b)
+  })
+}

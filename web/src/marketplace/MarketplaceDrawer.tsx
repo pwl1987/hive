@@ -1,8 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { MarketplaceAgentEntry } from '../api.js'
 import { useI18n } from '../i18n.js'
+import { sortCategoriesForDisplay } from './categoryLabels.js'
 import { MarketplaceAgentCard } from './MarketplaceAgentCard.js'
 import { MarketplaceAgentPreview } from './MarketplaceAgentPreview.js'
 import { MarketplaceCategoryTree } from './MarketplaceCategoryTree.js'
@@ -42,6 +43,16 @@ export const MarketplaceDrawer = ({
   const [query, setQuery] = useState('')
   const [showAllCategories, setShowAllCategories] = useState(false)
 
+  // Switching UI language repoints `useMarketplace` to the other repo's
+  // manifest. Anything that referenced an entry by path/name in the old
+  // language would silently mis-render (preview would 404 against the new
+  // fs tree), so drop selection on language change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: language is the trigger; setters are stable
+  useEffect(() => {
+    setSelectedAgent(null)
+    setSelectedCategory(null)
+  }, [language])
+
   const handleOpenChange = (next: boolean) => {
     if (!next) onClose()
   }
@@ -59,9 +70,11 @@ export const MarketplaceDrawer = ({
 
   const visibleCategories = useMemo(() => {
     if (!manifest) return [] as readonly string[]
-    if (showAllCategories) return manifest.categories
-    return manifest.categories.filter((category) => CORE_CATEGORIES.has(category))
-  }, [manifest, showAllCategories])
+    const filtered = showAllCategories
+      ? manifest.categories
+      : manifest.categories.filter((category) => CORE_CATEGORIES.has(category))
+    return sortCategoriesForDisplay(filtered, language)
+  }, [manifest, showAllCategories, language])
 
   const hiddenCategoryCount = useMemo(() => {
     if (!manifest) return 0
@@ -87,11 +100,16 @@ export const MarketplaceDrawer = ({
   const handleToggleShowAll = () => {
     setShowAllCategories((current) => {
       const next = !current
-      // Reset selection when collapsing back to core view if the current
-      // selection is now hidden — otherwise the grid silently empties.
-      if (!next && selectedCategory && !CORE_CATEGORIES.has(selectedCategory)) {
-        setSelectedCategory(null)
-        setSelectedAgent(null)
+      if (!next) {
+        // Collapsing back to core view: if the selected category or selected
+        // agent's category is now hidden, clear them — otherwise the preview
+        // pane lingers on an agent whose card is no longer in the grid.
+        if (selectedCategory && !CORE_CATEGORIES.has(selectedCategory)) {
+          setSelectedCategory(null)
+        }
+        if (selectedAgent && !CORE_CATEGORIES.has(selectedAgent.category)) {
+          setSelectedAgent(null)
+        }
       }
       return next
     })
@@ -113,10 +131,11 @@ export const MarketplaceDrawer = ({
         <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
           <Dialog.Content
             data-testid="marketplace-content"
-            className="dialog-scale-pop elev-2 pointer-events-auto flex max-h-[calc(100vh-32px)] w-[1280px] max-w-full flex-col rounded-lg border"
+            className="dialog-scale-pop elev-2 pointer-events-auto flex max-h-[calc(100vh-32px)] w-full flex-col rounded-lg border"
             style={{
               background: 'var(--bg-elevated)',
               borderColor: 'var(--border-bright)',
+              width: 'min(1280px, calc(100vw - 32px))',
             }}
           >
             <header
@@ -149,8 +168,8 @@ export const MarketplaceDrawer = ({
               style={{
                 borderColor: 'var(--border)',
                 gridTemplateColumns: selectedAgent
-                  ? '180px minmax(0, 1fr) 380px'
-                  : '180px minmax(0, 1fr)',
+                  ? '200px minmax(0, 1fr) 380px'
+                  : '200px minmax(0, 1fr)',
               }}
             >
               <aside className="min-h-0 overflow-y-auto px-3 py-3">

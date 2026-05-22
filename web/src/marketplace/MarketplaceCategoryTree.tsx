@@ -60,7 +60,8 @@ export const MarketplaceCategoryTree = ({
           type="button"
           onClick={onToggleShowAll}
           data-testid="marketplace-toggle-show-all"
-          className="mt-2 cursor-pointer rounded px-2 py-1 text-left text-xs text-ter transition-colors hover:bg-3 hover:text-sec"
+          className="mt-2 cursor-pointer rounded px-2 py-1.5 text-left text-xs text-sec transition-colors hover:bg-3 hover:text-pri"
+          style={{ borderTop: '1px solid var(--border)', borderRadius: 0, paddingTop: '8px' }}
         >
           {showAll
             ? t('marketplace.showCoreOnly')

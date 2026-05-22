@@ -703,7 +703,13 @@ html, body {
 .role-badge--orch { background: var(--bg-3); color: var(--text-secondary); }
 .role-badge--custom { background: var(--bg-3); color: var(--text-secondary); }
 
-/* line-clamp utility */
+/* line-clamp utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

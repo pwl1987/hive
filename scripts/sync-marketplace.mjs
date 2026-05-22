@@ -76,6 +76,36 @@ const parseArgs = () => {
   return out
 }
 
+// Vibe extraction:
+//   EN repos put a `vibe:` frontmatter field on most agents — use it, but
+//   reject runaway lines (>140 chars wraps + clamps to noise on the card).
+//   ZH upstream doesn't carry a vibe field, but 74% of its markdown bodies
+//   include a `**个性**: 系统性思维、注重地基、对开发者有同理心` line. We
+//   regex it out so ZH cards get the same characterful tagline as EN.
+const VIBE_MAX_LEN = 140
+const ZH_PERSONALITY_RE = /\*\*\s*(?:个性|性格)\s*\*\*\s*[:：]\s*([^\n]+)/
+
+const isLikelyPlaceholder = (text) => /^\[[^\n]*\]$/.test(text.trim())
+
+const extractVibe = (lang, fm, body) => {
+  if (fm.vibe) {
+    const value = String(fm.vibe).trim()
+    if (!value || value.length > VIBE_MAX_LEN) return null
+    if (isLikelyPlaceholder(value)) return null
+    return value
+  }
+  if (lang === 'zh' && typeof body === 'string') {
+    const match = body.match(ZH_PERSONALITY_RE)
+    if (match?.[1]) {
+      const value = match[1].trim().replace(/^["“”'`]+|["“”'`]+$/g, '')
+      if (!value || value.length > VIBE_MAX_LEN) return null
+      if (isLikelyPlaceholder(value)) return null
+      return value
+    }
+  }
+  return null
+}
+
 const ghJson = (path) => {
   const result = execFileSync('gh', ['api', path], { encoding: 'utf8' })
   return JSON.parse(result)
@@ -213,6 +243,7 @@ const syncOne = async (lang, options) => {
       }
       const normalizedPath = relativePath.split(sep).join('/')
       const category = normalizedPath.includes('/') ? normalizedPath.split('/')[0] : 'misc'
+      const vibe = extractVibe(lang, fm, parsed.content)
       agents.push({
         path: normalizedPath,
         category,
@@ -220,7 +251,7 @@ const syncOne = async (lang, options) => {
         description: String(fm.description),
         emoji: fm.emoji ? String(fm.emoji) : null,
         color: fm.color ? String(fm.color) : null,
-        vibe: fm.vibe ? String(fm.vibe) : null,
+        vibe,
       })
 
       const targetPath = join(stagingDir, normalizedPath)

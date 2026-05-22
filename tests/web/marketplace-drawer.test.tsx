@@ -149,6 +149,23 @@ describe('MarketplaceDrawer', () => {
     expect(screen.queryByText('Growth Hacker')).not.toBeInTheDocument()
   })
 
+  test('collapsing all-categories clears a selected agent whose category disappeared', async () => {
+    render(<MarketplaceDrawer open onClose={() => {}} onImport={() => {}} />)
+    await waitFor(() => expect(screen.getByText('Code Reviewer')).toBeInTheDocument())
+
+    // Expand to see non-core categories, then select the marketing agent.
+    fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
+    fireEvent.click(screen.getByText('Growth Hacker'))
+    await waitFor(() => expect(screen.getByTestId('marketplace-agent-preview')).toBeInTheDocument())
+
+    // Collapse back to core view. Growth Hacker is no longer visible AND the
+    // preview pane should drop (selectedAgent cleared because its category
+    // is no longer in the core set).
+    fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
+    expect(screen.queryByText('Growth Hacker')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('marketplace-agent-preview')).not.toBeInTheDocument()
+  })
+
   test('marks agents that match an importedNames entry with the imported badge', async () => {
     const importedNames = new Set(['Code Reviewer'])
     render(

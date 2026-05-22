@@ -34,10 +34,12 @@ export const MarketplaceAgentCard = ({
       data-agent-path={agent.path}
       data-imported={imported ? 'true' : undefined}
       data-selected={selected ? 'true' : undefined}
-      className="flex w-full cursor-pointer flex-col gap-1.5 rounded-md border px-3 py-2.5 text-left transition-colors"
+      className="flex w-full cursor-pointer flex-col gap-1.5 rounded-md border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-0"
       style={{
         background: cardBackground(selected),
         borderColor: cardBorder(selected),
+        // biome-ignore lint/style/useNamingConvention: react allows --custom-prop CSS vars on style
+        ['--tw-ring-color' as string]: 'color-mix(in oklab, var(--accent) 55%, transparent)',
       }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -52,15 +54,21 @@ export const MarketplaceAgentCard = ({
             data-testid="marketplace-agent-imported"
             className="flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
             style={{
-              background: 'color-mix(in oklab, var(--accent) 18%, transparent)',
-              color: 'var(--accent)',
+              // On a selected card the background is already an accent-mix
+              // wash, so a translucent accent pill dissolves into it. Flip to
+              // a solid accent fill so the imported state stays visible even
+              // when the card is also the active one.
+              background: selected
+                ? 'var(--accent)'
+                : 'color-mix(in oklab, var(--accent) 18%, transparent)',
+              color: selected ? '#ffffff' : 'var(--accent)',
             }}
           >
             <Check size={10} aria-hidden />
           </span>
         ) : null}
       </div>
-      <p className="line-clamp-2 text-[11px] leading-snug text-ter">{tagline}</p>
+      <p className="line-clamp-1 text-[11px] leading-snug text-ter">{tagline}</p>
     </button>
   )
 }
