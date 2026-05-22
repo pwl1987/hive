@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react'
 
 import type { MarketplaceAgentEntry } from '../api.js'
+import { useI18n } from '../i18n.js'
 
 interface MarketplaceAgentCardProps {
   agent: MarketplaceAgentEntry
@@ -25,7 +26,9 @@ export const MarketplaceAgentCard = ({
   imported,
   onSelect,
 }: MarketplaceAgentCardProps) => {
+  const { t } = useI18n()
   const tagline = agent.vibe?.trim() ? agent.vibe : agent.description
+  const importedLabel = t('marketplace.importedBadge')
   return (
     <button
       type="button"
@@ -50,9 +53,10 @@ export const MarketplaceAgentCard = ({
         {imported ? (
           <span
             role="img"
-            aria-label="imported"
+            aria-label={importedLabel}
+            title={importedLabel}
             data-testid="marketplace-agent-imported"
-            className="flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+            className="flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider"
             style={{
               // On a selected card the background is already an accent-mix
               // wash, so a translucent accent pill dissolves into it. Flip to
@@ -70,7 +74,7 @@ export const MarketplaceAgentCard = ({
           </span>
         ) : null}
       </div>
-      <p className="line-clamp-1 text-[11px] leading-snug text-sec">{tagline}</p>
+      <p className="line-clamp-1 text-xs leading-snug text-sec">{tagline}</p>
     </button>
   )
 }

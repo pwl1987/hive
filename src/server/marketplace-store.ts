@@ -11,7 +11,7 @@
 // either the `rootDir` setting or the build hook changes, that invariant must
 // be re-verified — there is no fallback path.
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -100,6 +100,12 @@ export const readAgent = (
   }
   if (!existsSync(candidate)) {
     throw new MarketplaceNotFoundError(`Marketplace agent not found: ${language}/${relativePath}`)
+  }
+  // Guard against upstream pushing a directory whose name ends in `.md` —
+  // the suffix check would pass, existsSync would pass, but readFileSync
+  // would throw EISDIR. Surface as a 404 instead of a 500.
+  if (!statSync(candidate).isFile()) {
+    throw new MarketplaceNotFoundError(`Marketplace agent not a file: ${language}/${relativePath}`)
   }
   const raw = readFileSync(candidate, 'utf8')
   const parsed = matter(raw)

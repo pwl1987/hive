@@ -38,7 +38,7 @@ const Row = ({ label, count, active, onClick }: RowProps) => (
     onClick={onClick}
     data-active={active ? 'true' : 'false'}
     className={`marketplace-category-row flex w-full cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm transition-colors ${
-      active ? 'text-pri' : 'text-sec'
+      active ? 'font-medium text-pri' : 'text-sec'
     }`}
     style={buttonStyle(active)}
   >

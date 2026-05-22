@@ -6,12 +6,18 @@ import { useEffect, useMemo, useState } from 'react'
 import type { MarketplaceAgentDetail, MarketplaceAgentEntry } from '../api.js'
 import { useI18n } from '../i18n.js'
 
-// marked@18 parse() returns string when configured sync; we set async:false
-// once at module load so call sites don't need to await.
-marked.setOptions({ async: false, breaks: false, gfm: true })
+// marked@18 parse() returns string when async:false. Pass the option per-call
+// so a future upgrade that flips the default doesn't silently start returning
+// Promise objects that DOMPurify happily stringifies to "[object Promise]".
+marked.setOptions({ breaks: false, gfm: true })
 
 const renderMarkdownToSafeHtml = (body: string): string => {
-  const rawHtml = marked.parse(body) as string
+  const rawHtml = marked.parse(body, { async: false })
+  if (typeof rawHtml !== 'string') {
+    // Defensive: marked v18 with async:false always returns string. If we
+    // ever land here, fail loudly instead of rendering "[object Promise]".
+    throw new Error('marked.parse returned a non-string with async:false')
+  }
   return DOMPurify.sanitize(rawHtml, {
     USE_PROFILES: { html: true },
     ALLOWED_ATTR: ['href', 'name', 'target', 'rel', 'title', 'class', 'id'],
@@ -72,10 +78,12 @@ export const MarketplaceAgentPreview = ({
       className="flex h-full flex-col gap-3 border-l px-4 py-3"
       style={{ borderColor: 'var(--border)' }}
     >
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          {agent.emoji ? <span className="text-lg leading-none">{agent.emoji}</span> : null}
-          <h3 className="text-base font-semibold text-pri">{agent.name}</h3>
+      <header className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-center gap-2">
+          {agent.emoji ? (
+            <span className="shrink-0 text-lg leading-none">{agent.emoji}</span>
+          ) : null}
+          <h3 className="min-w-0 break-words text-base font-semibold text-pri">{agent.name}</h3>
         </div>
         <p className="text-xs text-ter">{agent.description}</p>
       </header>

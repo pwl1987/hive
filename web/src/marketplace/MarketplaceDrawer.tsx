@@ -10,6 +10,26 @@ import { MarketplaceAgentPreview } from './MarketplaceAgentPreview.js'
 import { MarketplaceCategoryTree } from './MarketplaceCategoryTree.js'
 import { useMarketplace } from './useMarketplace.js'
 
+// Renders the source-label template (EN: "Curated from {repo}", ZH: "由
+// {repo} 提供") with the repo slug in DM Mono — a github owner/repo path
+// reads as code, not prose, so the slash + descenders don't collide with
+// Inter's body type.
+const REPO_PLACEHOLDER = 'REPO'
+const renderSourceLabel = (
+  t: (key: 'marketplace.sourceLabel', values: { repo: string }) => string,
+  repo: string
+) => {
+  const template = t('marketplace.sourceLabel', { repo: REPO_PLACEHOLDER })
+  const [before, after = ''] = template.split(REPO_PLACEHOLDER)
+  return (
+    <>
+      {before}
+      <span className="mono">{repo}</span>
+      {after}
+    </>
+  )
+}
+
 // Categories surfaced by default in the marketplace. 200+ agents include many
 // off-topic roles (marketing, game-dev, academic, etc.) that a CLI-coding tool
 // doesn't need front-and-center. User can click "Show all categories" to
@@ -52,6 +72,7 @@ export const MarketplaceDrawer = ({
   useEffect(() => {
     setSelectedAgent(null)
     setSelectedCategory(null)
+    setQuery('')
   }, [language])
 
   const handleOpenChange = (next: boolean) => {
@@ -149,11 +170,11 @@ export const MarketplaceDrawer = ({
               style={{ borderColor: 'var(--border)' }}
             >
               <div className="flex flex-col gap-0.5">
-                <Dialog.Title className="text-base font-semibold text-pri">
+                <Dialog.Title className="text-lg font-semibold text-pri">
                   {t('marketplace.title')}
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-ter">
-                  {manifest ? t('marketplace.sourceLabel', { repo: manifest.source.repo }) : ' '}
+                  {manifest ? renderSourceLabel(t, manifest.source.repo) : ' '}
                 </Dialog.Description>
               </div>
               <div className="flex items-center gap-2">
@@ -211,6 +232,7 @@ export const MarketplaceDrawer = ({
                     onSelect={(category) => {
                       setSelectedCategory(category)
                       setSelectedAgent(null)
+                      setQuery('')
                     }}
                     counts={categoryCounts}
                     showAll={showAllCategories}
