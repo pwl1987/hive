@@ -127,40 +127,37 @@ describe('MarketplaceDrawer', () => {
     expect(screen.getByText('No matching agents')).toBeInTheDocument()
   })
 
-  test('hides non-core categories by default and reveals them via the show-all toggle', async () => {
+  test('shows all categories by default and folds non-core away via the toggle', async () => {
     render(<MarketplaceDrawer open onClose={() => {}} onImport={() => {}} />)
     await waitFor(() => expect(screen.getByText('Code Reviewer')).toBeInTheDocument())
 
-    // Marketing is non-core. The category label and its agent should be hidden.
-    expect(screen.queryByText('Marketing')).not.toBeInTheDocument()
-    expect(screen.queryByText('Growth Hacker')).not.toBeInTheDocument()
-
-    // Toggle button reads "Show all categories (+1)".
-    const toggle = screen.getByTestId('marketplace-toggle-show-all')
-    expect(toggle.textContent ?? '').toContain('1')
-
-    fireEvent.click(toggle)
+    // Default state: non-core categories visible (Marketing + Growth Hacker
+    // both rendered).
     expect(screen.getByText('Marketing')).toBeInTheDocument()
     expect(screen.getByText('Growth Hacker')).toBeInTheDocument()
 
-    // Toggle flips to "Show core only"; click again folds non-core away.
+    // Toggle to "core only" — marketing collapses away.
     fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
     expect(screen.queryByText('Marketing')).not.toBeInTheDocument()
     expect(screen.queryByText('Growth Hacker')).not.toBeInTheDocument()
+
+    // Toggle back — non-core returns.
+    fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
+    expect(screen.getByText('Marketing')).toBeInTheDocument()
+    expect(screen.getByText('Growth Hacker')).toBeInTheDocument()
   })
 
   test('collapsing all-categories clears a selected agent whose category disappeared', async () => {
     render(<MarketplaceDrawer open onClose={() => {}} onImport={() => {}} />)
     await waitFor(() => expect(screen.getByText('Code Reviewer')).toBeInTheDocument())
 
-    // Expand to see non-core categories, then select the marketing agent.
-    fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
+    // Default shows everything; select the marketing agent.
     fireEvent.click(screen.getByText('Growth Hacker'))
     await waitFor(() => expect(screen.getByTestId('marketplace-agent-preview')).toBeInTheDocument())
 
-    // Collapse back to core view. Growth Hacker is no longer visible AND the
-    // preview pane should drop (selectedAgent cleared because its category
-    // is no longer in the core set).
+    // Toggle to "core only". Growth Hacker leaves the grid AND the preview
+    // pane drops (selectedAgent cleared because its category is no longer
+    // in the visible set).
     fireEvent.click(screen.getByTestId('marketplace-toggle-show-all'))
     expect(screen.queryByText('Growth Hacker')).not.toBeInTheDocument()
     expect(screen.queryByTestId('marketplace-agent-preview')).not.toBeInTheDocument()

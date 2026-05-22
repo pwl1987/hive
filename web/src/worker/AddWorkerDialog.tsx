@@ -179,8 +179,14 @@ export const AddWorkerDialog = ({
                   type="button"
                   onClick={() => setMarketplaceOpen(true)}
                   data-testid="open-marketplace"
-                  className="flex cursor-pointer items-center gap-2 self-start rounded-md border px-3 py-1.5 text-xs text-sec transition-colors hover:bg-3"
-                  style={{ borderColor: 'var(--border)' }}
+                  className="marketplace-browse-btn flex cursor-pointer items-center gap-2 self-start rounded-md border px-3 py-1.5 text-xs text-sec outline-none transition-colors focus-visible:ring-2"
+                  style={{
+                    background: 'var(--bg-0)',
+                    borderColor: 'var(--border-bright)',
+                    // biome-ignore lint/style/useNamingConvention: CSS custom prop
+                    ['--tw-ring-color' as string]:
+                      'color-mix(in oklab, var(--accent) 45%, transparent)',
+                  }}
                 >
                   <Store size={14} aria-hidden />
                   {t('marketplace.openFromAddWorker')}

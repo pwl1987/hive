@@ -34,7 +34,7 @@ export const MarketplaceAgentCard = ({
       data-agent-path={agent.path}
       data-imported={imported ? 'true' : undefined}
       data-selected={selected ? 'true' : undefined}
-      className="flex w-full cursor-pointer flex-col gap-1.5 rounded-md border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-0"
+      className="marketplace-card flex w-full cursor-pointer flex-col gap-1.5 rounded-md border px-3 py-2.5 text-left outline-none transition-[background,border-color,transform] duration-100 ease-out focus-visible:ring-2 focus-visible:ring-offset-0 active:translate-y-px"
       style={{
         background: cardBackground(selected),
         borderColor: cardBorder(selected),
@@ -57,18 +57,20 @@ export const MarketplaceAgentCard = ({
               // On a selected card the background is already an accent-mix
               // wash, so a translucent accent pill dissolves into it. Flip to
               // a solid accent fill so the imported state stays visible even
-              // when the card is also the active one.
+              // when the card is also the active one. Unselected: opaque
+              // accent on bg-2 — AA-readable instead of the 18% mix which
+              // came in at ~2.4:1.
               background: selected
                 ? 'var(--accent)'
-                : 'color-mix(in oklab, var(--accent) 18%, transparent)',
-              color: selected ? '#ffffff' : 'var(--accent)',
+                : 'color-mix(in oklab, var(--accent) 28%, transparent)',
+              color: selected ? '#ffffff' : 'color-mix(in oklab, var(--accent) 60%, white)',
             }}
           >
             <Check size={10} aria-hidden />
           </span>
         ) : null}
       </div>
-      <p className="line-clamp-1 text-[11px] leading-snug text-ter">{tagline}</p>
+      <p className="line-clamp-1 text-[11px] leading-snug text-sec">{tagline}</p>
     </button>
   )
 }

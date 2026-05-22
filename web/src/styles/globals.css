@@ -1639,6 +1639,29 @@ html, body {
   color: var(--accent);
 }
 
+/* "Browse marketplace" entry button in AddWorker — same bg-3 invisibility
+   issue as the cards; give it an explicit accent-mix hover. */
+.marketplace-browse-btn:hover {
+  background: color-mix(in oklab, var(--accent) 12%, var(--bg-0));
+  border-color: color-mix(in oklab, var(--accent) 50%, var(--border-bright));
+  color: var(--text-primary);
+}
+
+/* Marketplace card hover/active — bg-3 == bg-elevated in this theme so a
+   plain `hover:bg-3` is a no-op on the drawer container; cards need
+   explicit accent-mix washes to look interactive. Selected cards skip the
+   hover wash (they already have an accent border + accent-mix fill). */
+.marketplace-card[data-selected='true'] {
+  border-color: var(--accent);
+}
+.marketplace-card:not([data-selected='true']):hover {
+  background: color-mix(in oklab, var(--accent) 6%, var(--bg-2));
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border-bright));
+}
+.marketplace-card:not([data-selected='true']):active {
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg-2));
+}
+
 /* Lightweight prose for the marketplace preview pane — not a full typography
    plugin, just enough hierarchy to read agent prompts at a glance instead of
    wading through a <pre> block. Pairs with marked + DOMPurify on the JS side. */

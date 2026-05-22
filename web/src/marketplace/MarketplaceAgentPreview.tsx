@@ -1,4 +1,5 @@
 import DOMPurify from 'isomorphic-dompurify'
+import { ExternalLink } from 'lucide-react'
 import { marked } from 'marked'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -79,8 +80,9 @@ export const MarketplaceAgentPreview = ({
         <p className="text-xs text-ter">{agent.description}</p>
       </header>
       <div
-        className="min-h-0 flex-1 overflow-y-auto rounded border px-3 py-2 text-xs leading-relaxed"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg-2)' }}
+        key={agent.path}
+        className="scroll-y min-h-0 flex-1 rounded px-3 py-2 text-xs leading-relaxed"
+        style={{ background: 'var(--bg-2)' }}
       >
         {state.status === 'loading' ? <p className="text-ter">…</p> : null}
         {state.status === 'error' ? (
@@ -101,23 +103,32 @@ export const MarketplaceAgentPreview = ({
           href={sourceUrl}
           target="_blank"
           rel="noreferrer noopener"
-          className="text-xs text-ter underline hover:text-sec"
+          className="inline-flex items-center gap-1 text-xs text-sec transition-colors hover:text-pri"
         >
           {t('marketplace.viewSource')}
+          <ExternalLink size={11} aria-hidden />
         </a>
-        <button
-          type="button"
-          disabled={state.status !== 'loaded' || !state.detail}
-          onClick={() => {
-            if (!state.detail) return
-            onImport({ name: agent.name, description: state.detail.body.trim() })
-          }}
-          data-testid="marketplace-import-button"
-          className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-on-accent transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: 'var(--accent)' }}
-        >
-          {t('marketplace.importButton')}
-        </button>
+        {(() => {
+          const importDisabled = state.status !== 'loaded' || !state.detail
+          return (
+            <button
+              type="button"
+              disabled={importDisabled}
+              onClick={() => {
+                if (!state.detail) return
+                onImport({ name: agent.name, description: state.detail.body.trim() })
+              }}
+              data-testid="marketplace-import-button"
+              className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed"
+              style={{
+                background: importDisabled ? 'var(--bg-3)' : 'var(--accent)',
+                color: importDisabled ? 'var(--text-tertiary)' : '#ffffff',
+              }}
+            >
+              {t('marketplace.importButton')}
+            </button>
+          )
+        })()}
       </footer>
     </div>
   )
