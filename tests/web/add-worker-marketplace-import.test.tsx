@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { FormEvent } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { Toaster } from '../../web/src/ui/Toast.js'
+import { Toaster } from '../../web/src/ui/toast.js'
 import { ToastProvider } from '../../web/src/ui/useToast.js'
 import { AddWorkerDialog } from '../../web/src/worker/AddWorkerDialog.js'
 import { useWorkerComposer } from '../../web/src/worker/useWorkerComposer.js'
