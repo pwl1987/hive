@@ -32,6 +32,10 @@ English · [简体中文](./README.md)
 > already runs CLI agents. The latest stable release is on
 > [npm](https://www.npmjs.com/package/@tt-a1i/hive) and the badge above resolves
 > to it.
+>
+> This repository is Hive's public source baseline. User-facing releases are
+> distributed through npm; if you only want to install or upgrade Hive, prefer
+> the npm commands below.
 
 <p align="center">
   <img src="./assets/hive-team-view.png" alt="Hive workbench with a 4-agent team — orchestrator dispatching while workers run" />

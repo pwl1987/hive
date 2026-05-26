@@ -24,6 +24,8 @@
 [English](./README.en.md) · 简体中文
 
 > Hive 是本机优先的工具，只监听 `127.0.0.1`，面向已经在用 CLI Agent 的人。最新稳定版本见 [npm](https://www.npmjs.com/package/@tt-a1i/hive)，上面的 badge 会指向它。
+>
+> 本仓库是 Hive 的公开源码基线。面向用户的正式安装包以 npm 发布为准；如果你只是想安装或升级，请优先使用下面的 npm 命令。
 
 <p align="center">
   <img src="./assets/hive-team-view.png" alt="Hive 工作台：4 个 CLI Agent 团队，Orchestrator 派单、Worker 各自开工" />
