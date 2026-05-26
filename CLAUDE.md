@@ -11,11 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 当前进度
 
 - ✅ Brainstorming 完成（superpowers:brainstorming 流程）
-- ✅ Design spec 已写好并 commit：[`docs/superpowers/specs/2026-04-18-hive-design.md`](./docs/superpowers/specs/2026-04-18-hive-design.md)
+- ✅ Design spec 已写好；内部实施规格不随公开仓库发布
 - 🟡 等用户 review 完进入 `superpowers:writing-plans` 出实现计划
 - ⬜ 实现尚未开始，仓库里除了设计文档还没有任何代码
 
-**继续工作时**：先读 design spec（700 行，覆盖架构/协议/UI/数据模型/MVP 范围/风险），再决定下一步。如果 user 已经确认，下一步是 `superpowers:writing-plans`。
+**继续工作时**：以当前公开代码、README 和 issue 讨论为准；内部实施规格不随公开仓库发布。
 
 ## 关键设计决策（速查，避免重读全文）
 

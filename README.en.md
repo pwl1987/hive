@@ -305,9 +305,6 @@ Maintainer dry run:
 pnpm release:dry
 ```
 
-See [docs/release.md](docs/release.md) for the full tagged release checklist,
-including manual Windows smoke steps.
-
 Tag pushes matching `v*` run the GitHub Actions release workflow. The workflow
 verifies macOS, Ubuntu, and Windows, then publishes to npm with `NPM_TOKEN`.
 

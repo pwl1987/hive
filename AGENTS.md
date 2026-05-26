@@ -2,7 +2,7 @@
 
 > 先读 `./CLAUDE.md` 拿项目背景。**本文件是行为约束，违反任何一条都会在 code review 被打回。**
 
-设计 spec：`docs/superpowers/specs/2026-04-18-hive-design.md`（700 行，单一事实来源）。**spec 与本文件冲突时以 spec 为准；spec 模糊时先问，不要臆断**。
+内部设计 spec 不随公开仓库发布。公开贡献以当前代码、README 和 issue 讨论为准；范围不清时先问，不要臆断。
 
 ---
 
@@ -140,8 +140,8 @@ HTTP/JSON 层用 snake_case，TS 内部可驼峰，**序列化时要转换**。
 ### 4.3 每个 reviewer prompt 必须包含
 
 1. 项目背景一句话 + 当前阶段（M1 / M2 / 修订）
-2. 设计 spec 路径：`docs/superpowers/specs/2026-04-18-hive-design.md`
-3. 本任务的目标和原始任务清单
+2. 当前任务目标和原始任务清单
+3. 相关代码范围和已知约束
 4. **明确要求 reviewer**：
    - 只列问题 + 严重程度 + 文件:行号
    - 不要罗列优点
@@ -198,8 +198,7 @@ HTTP/JSON 层用 snake_case，TS 内部可驼峰，**序列化时要转换**。
 ## 七、参考资料优先级
 
 1. 本文件（行为约束）
-2. `docs/superpowers/specs/2026-04-18-hive-design.md`（设计 spec）
-3. `./CLAUDE.md`（项目背景）
-4. 已通过 review 的现有代码
+2. `./CLAUDE.md`（项目背景）
+3. 已通过 review 的现有代码
 
 冲突时按以上优先级裁决。
