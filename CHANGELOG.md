@@ -299,9 +299,7 @@ Public-preview surface polish + internal hygiene pass.
   section that surfaces the fully-client-side demo flow (shipped in
   alpha.1 but previously invisible to anyone who had not booted Hive).
 - Bug-report and feature-request issue templates plus `CONTRIBUTING.md`
-  landed; GitHub Community Standards checklist is now green. A
-  `docs/growth-roadmap.md` working doc was added to track the
-  positioning, brand, and protocol roadmap.
+  landed; GitHub Community Standards checklist is now green.
 - Todo drawer rebuilt around the actual task it does: owner-colour
   pills, hover-revealed actions (edit / add subtask / delete), inline
   editing with `\n` sanitisation, optimistic UI with rollback, and a

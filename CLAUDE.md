@@ -1,95 +1,43 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file gives AI coding tools public-safe project context for Hive. It stays
+brief by design: unpublished implementation plans and product strategy are not
+published in this repository.
 
-## Hive 是什么
+## What Hive Is
 
-**Hive** 是一个浏览器端的多 CLI agent 协作工作台。用户在 web UI 里组建一个 agent 团队：一个 **Orchestrator**（任意 CLI agent，如 Claude Code/Codex/OpenCode/Gemini）跟用户对话、维护任务图、给 worker 派单；多个 **Worker**（也是 CLI agent，可定义角色）执行任务并通过 `team report` 命令汇报。所有 agent 都跑在浏览器里的 xterm.js 终端中。
+Hive is a browser-native workbench for coordinating multiple local CLI agents.
+Users create a workspace, start one Orchestrator agent, add worker agents, and
+let them communicate through Hive's injected `team` protocol.
 
-核心隐喻是蜂巢：Orchestrator 是蜂后，Worker 是工蜂，任务图是蓝图。
+Key properties:
 
-## 当前进度
+- Agents are real local PTY processes such as Claude Code, Codex, OpenCode,
+  Gemini, or custom commands.
+- The web UI talks to a local Node runtime over HTTP and WebSocket on
+  `127.0.0.1`.
+- Workspace metadata is stored locally in SQLite.
+- Workspace task state lives in `<workspace>/.hive/tasks.md`.
+- `team send`, `team report`, `team status`, and related commands are only
+  injected into Hive-managed agent sessions.
 
-- ✅ Brainstorming 完成（superpowers:brainstorming 流程）
-- ✅ Design spec 已写好；内部实施规格不随公开仓库发布
-- 🟡 等用户 review 完进入 `superpowers:writing-plans` 出实现计划
-- ⬜ 实现尚未开始，仓库里除了设计文档还没有任何代码
+## Public Development Source Of Truth
 
-**继续工作时**：以当前公开代码、README 和 issue 讨论为准；内部实施规格不随公开仓库发布。
+For public work, use these files as the source of truth:
 
-## 关键设计决策（速查，避免重读全文）
+1. `README.md` / `README.en.md` for user-facing behavior.
+2. `AGENTS.md` for coding and review constraints.
+3. Existing code and tests for implementation details.
+4. GitHub issues and PR discussion for scoped changes.
 
-| 主题 | 决策 |
-|---|---|
-| 形态 | Web app（浏览器 + 本地 Node runtime，绑定 127.0.0.1，**常驻服务，不绑定项目目录**） |
-| Workspace 模型 | sidebar 多 workspace（cmux 风格），主区一次只看一个，所有 PTY 后台并行 |
-| 添加 workspace | OS 系统目录选择器 + 手动粘贴路径，持久化到 SQLite |
-| Orch 与 Worker 关系 | 都是 PTY 里的 CLI 子进程，每个 agent 隶属于一个 workspace；差异只在角色 prompt + 工具白名单 |
-| 跨 workspace | 完全隔离：不能跨 workspace 派单/查询/通信 |
-| 通信协议 | `team` CLI 子命令（`team send` / `team cancel` / `team report` / `team list`），异步无阻塞 |
-| 派单传输 | 系统拦截 `team send` → 按约定 prompt 模板注入目标 worker 的 stdin |
-| 汇报回灌 | worker 调 `team report` → 系统作为系统消息注入 orch 的 stdin |
-| 路由信息 | 每个 PTY 注入 env: `HIVE_PORT + HIVE_PROJECT_ID + HIVE_AGENT_ID` |
-| `team` CLI 部署 | **PATH prepend** 注入到 PTY env（不全局安装），自带 `<hive-pkg>/bin/team`，零污染用户系统 |
-| Crash 恢复模型 | 4 种场景明确（§3.5.1：单崩 / 主动停 / 正常 exit / runtime 重启）。两层引擎：**Layer A** 用 CLI 原生 session resume（CC `--resume <id>`），完整恢复对话；**Layer B** fallback 摘要换班（拼装 messages + .hive/tasks.md + worker 状态注入 stdin）。Hive runtime 重启**不自动启动** agent，提供 [Restart] / [Restart All] 按钮 |
-| Agent 状态机 | 仅 `working` / `idle` / `stopped` 三态（§3.6）。状态完全由协议事件驱动：send → working、report/cancel → idle（pending_count 归零时）、PTY exit → stopped。**不做超时/卡死检测，不增加心跳**；卡死的 agent 持续显示 working，由用户手动判断 |
-| 角色模板 | **4 个内置**（1 Orchestrator + 3 Worker：Coder / Reviewer / Tester）+ 用户自定义；MVP 不内置 Architect（语义跟 Orch 重叠）。Orchestrator 模板系统级唯一、不出现在 Add Worker 列表；其他可"复制为自定义"修改 |
-| 兜底 | **不做静默检测、不做心跳**——worker 必须显式 report，否则视为未完成 |
-| 任务图 | 每个 workspace 的项目根 `.hive/tasks.md`（GFM task list），文件 watch 同步 UI |
-| 工作目录隔离 | **不做 worktree**，所有 agent 共享对应 workspace 根，冲突由 orch 拆分负责 |
-| 默认权限 | YOLO 模式（自动跳过 CLI agent 的权限确认） |
+If behavior is unclear, ask in an issue or PR before inventing protocol changes.
 
-## 参考项目
+## Engineering Rules
 
-实现时大量借鉴这两个外部项目的设计。**它们不在本仓库内**，需要时用绝对路径访问：
+- Keep protocol payloads stable and use snake_case on HTTP/JSON boundaries.
+- Preserve the agent state model: `idle`, `working`, `stopped`.
+- Do not add production fallbacks only to make tests pass.
+- Prefer real integration coverage for HTTP, SQLite, and PTY behavior.
+- Avoid broad refactors unless they directly support the change being made.
 
-### `/Users/admin/code/agent-kanban/kanban/` — Cline 出品的开源 kanban
-
-借鉴：
-- **node-pty + xterm.js + WebGL** 的标准集成范式
-- **WebSocket 流控**：4ms 批发送、<256B 直发、16KB/100KB 双水位线、客户端 `output_ack` 反压（见 `kanban/src/terminal/ws-server.ts`）
-- **一 PTY 多观众**：服务端 `TerminalStateMirror` 用 headless xterm 做 scrollback（10K 行），多浏览器 tab 同时观看
-- **Hook 驱动状态机**：agent 主动调命令上报状态（不解析 stdout 正则）—— Hive 的 `team report` 同源思想
-- **技术栈**：React + Vite + Tailwind v4 + Radix UI + tRPC 11 + Biome + Vitest
-- 工程实践：`kanban/AGENTS.md` 里的 TypeScript 规范、web-ui 设计 token、终端集成踩坑笔记很值得读
-
-不借鉴：1 卡 1 agent 的模型、每任务 worktree、`@clinebot/*` SDK 依赖。
-
-### `/Users/admin/code/golutra/` — Tauri + Vue 的多 agent 桌面应用
-
-借鉴：
-- **Per-agent 派单串行队列**：每个 worker 一条命令链，避免消息交错（见 `src-tauri/src/terminal_engine/session/mod.rs:280` 合并逻辑）
-- **派单时 prompt 注入约定**：每次派单都把"角色 + 完成约定 + 任务"包成模板（user 直接确认要这套体验）
-- **32 项队列上限 + 128 条去重窗口**
-- **语义提取兜底**（golutra 用，Hive **不用**，但要知道这个工程可能性，未来如果 worker 不调 `team report` 可能用得上）
-
-不借鉴：Tauri 桌面端形态、前端当 orchestrator（Hive 的 orch 也是 PTY 里的 CLI agent，跟 worker 平级）。
-
-## 预期技术栈
-
-实现期会用：
-- Node.js 22+ ESM
-- React 19 + Vite 6
-- Tailwind CSS v4 + Radix UI
-- tRPC 11 + WebSocket（终端流）
-- node-pty + xterm.js（含 WebGL addon）
-- better-sqlite3 + Drizzle ORM（项目元数据/角色模板/对话历史）
-- chokidar（监听 `.hive/tasks.md`）
-- Biome + Vitest
-- commander（`hive` 主命令 + `team` 子命令）
-
-完整技术栈和理由见 design spec 第 9 节。
-
-## 工作流约定
-
-- 实现阶段必须先用 `superpowers:writing-plans` 出 plan，再用 `superpowers:executing-plans` / `superpowers:subagent-driven-development` 执行
-- 每个里程碑用 `superpowers:requesting-code-review` 自检
-- `harnessed:*` 系列做完成前的 QA 闸门
-- Brainstorming 已完成，**spec 有变更先在对话里跟 user 达成一致**再改文档
-
-## TDD 纪律（重点摘，全文见 `AGENTS.md` §3）
-
-TDD 不是拖慢效率，假 TDD 才是。两条硬规则：
-
-1. **集成测试（`tests/server/*` + `tests/cli/*`）禁止 mock PTY / node-pty**——违者按假测试删，不改名。要测单纯逻辑去 `tests/unit/`。
-2. **每条 assert 必须自问一遍："产品代码完全写反，这断言还能过吗？"** 过得了就是假测试：`not.toThrow()` × N、恒真数组、trivially 过的 not.toContain、断言自己喂进去的 mock 调用——看见即删。
+For the full local coding rules, read `AGENTS.md`.
