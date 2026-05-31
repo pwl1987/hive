@@ -2,6 +2,28 @@
 
 All notable user-facing changes will be documented in this file.
 
+## 1.5.0 - 2026-05-31
+
+Workflow runtime, experimental team automation, and Codex reliability.
+
+- Adds the experimental Hive workflow runtime: Orchestrators can author
+  multi-agent workflow scripts that fan out across real Hive PTY workers, show
+  runs in the Workflows drawer, stop runs, inspect run details, schedule
+  recurring workflows, and route workflow reports back into the Orchestrator.
+- Adds workflow agent CLI policy settings so users can choose which CLI
+  workflow-created agents use by default and which CLIs are allowed.
+- Adds the experimental auto-staff setting, letting the Orchestrator size the
+  worker roster to the task and prefer task-scoped ephemeral workers when it
+  needs temporary coders, testers, or reviewers.
+- Adds an in-app What's New dialog so future upgrades can surface curated
+  release highlights without requiring users to read the changelog manually.
+- Improves Codex reliability by waiting for pasted-content acknowledgements on
+  long dispatches while submitting short report/status injections quickly,
+  avoiding the several-second delay before reports reach the Orchestrator.
+- Hardens Windows and runtime edge cases, including malformed WebSocket frames,
+  stale nvm4w Codex node entrypoints, workflow worker exits, and additional
+  workflow/runtime cleanup paths.
+
 ## 1.4.0 - 2026-05-22
 
 Template marketplace and agent picker polish.
