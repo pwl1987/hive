@@ -9,11 +9,11 @@
 </p>
 
 **Hive is a browser-native workbench where a team of agents works together — one orchestrates, the rest execute, all on your laptop.** The orchestrator
-is a real `claude` / `codex` / `opencode` / `gemini` process — not you, and
-not a script — and so are the workers it dispatches to. Every agent runs as
-a real PTY on your machine, talks through a small `team` protocol that Hive
-injects into each agent's shell, and shares a markdown task graph at
-`<workspace>/.hive/tasks.md`.
+is a real `agy` / `claude` / `codex` / `opencode` / `gemini` / `hermes` /
+`qwen` process — not you, and not a script — and so are the workers it
+dispatches to. Every agent runs as a real PTY on your machine, talks through a
+small `team` protocol that Hive injects into each agent's shell, and shares a
+markdown task graph at `<workspace>/.hive/tasks.md`.
 
 Code, research, drafts, translations — if a team can split the work, a hive can take it on.
 
@@ -80,6 +80,12 @@ npm install -g @tt-a1i/hive
 hive
 ```
 
+If npm prints `npm warn allow-scripts` or `prebuild-install@7.1.3 deprecated`
+during install, first check whether the command ends with `added ... packages`.
+Those warnings usually come from npm's install-script review plus native
+binary setup for `node-pty`, `better-sqlite3`, and `esbuild`; they do not mean
+Hive failed to install. The troubleshooting section below breaks them down.
+
 Open the printed local URL, usually `http://127.0.0.1:3000/`. Use
 `hive --port 4010` when you need a specific local port.
 
@@ -93,6 +99,13 @@ hive update
 in-flight Hive process to pick up the new version. If you installed Hive with
 pnpm or yarn, upgrade through the same package manager — otherwise the new
 npm copy will shadow your existing install.
+
+If your npm mirror has not synced the latest release yet, use the official
+registry directly:
+
+```bash
+npm install -g @tt-a1i/hive@latest --registry=https://registry.npmjs.org
+```
 
 Install Hive as an app (optional):
 
@@ -111,10 +124,11 @@ a separate app from `hive --port 3000`. To uninstall, visit `chrome://apps`,
 right-click the Hive tile, and choose **Remove from Chrome…**.
 
 Hive asks the browser to confirm before closing the tab or PWA window so an
-accidental Cmd-W doesn't drop your session. Modern browsers gate that prompt
-on prior page interaction — if you open the PWA and immediately press Cmd-W
-without clicking or typing anywhere first, it still closes cleanly. That's a
-browser policy, not a Hive bug.
+accidental close shortcut (Cmd-W on macOS, Ctrl-W on Windows/Linux) doesn't
+drop your session. Modern browsers gate that prompt on prior page interaction
+— if you open the PWA and immediately press the close shortcut without
+clicking or typing anywhere first, it still closes cleanly. That's a browser
+policy, not a Hive bug.
 
 First-run flow:
 
@@ -125,6 +139,18 @@ First-run flow:
 4. Add workers from the Team Members panel.
 5. Ask the Orchestrator to delegate work. It sends tasks with
    `team send <worker-name> "<task>"`; workers report back with `team report`.
+
+If you want the Orchestrator to size the team itself, leave **Auto-staff**
+enabled (it is on by default). It can `team spawn` the right temporary mix of
+coders, testers, and reviewers for the task, then Hive dismisses those
+temporary workers when their work is done.
+
+For stronger automation, enable the experimental **Workflows** toggle in
+settings. The Orchestrator can then author and run multi-agent workflows that
+fan out across implementation, review, testing, or other stages. The topbar
+**Workflows** panel shows runs, phase results, logs, schedules, and stop
+controls. The same panel also lets you choose which CLI workflow-created
+agents use by default and which CLIs they are allowed to use.
 
 ## How It Works
 
@@ -163,10 +189,15 @@ Three details matter:
 
 | Preset | Command expected on `PATH` | Default bypass mode | Session resume |
 | --- | --- | --- | --- |
+| Antigravity CLI | `agy` | `--dangerously-skip-permissions` | `--conversation <session_id>` |
 | Claude Code | `claude` | `--dangerously-skip-permissions`, `--permission-mode=bypassPermissions` | `--resume <session_id>` |
 | Codex | `codex` | `--dangerously-bypass-approvals-and-sandbox` | `resume <session_id>` |
 | OpenCode | `opencode` | Config-driven in `~/.config/opencode/opencode.json` | `--session <session_id>` |
 | Gemini | `gemini` | `--yolo` | `--resume <session_id>` |
+| Hermes | `hermes` | `--yolo` | `--resume <session_id>` |
+| Qwen Code | `qwen` | `--approval-mode yolo` | `--resume <session_id>` |
+| Cursor CLI | `cursor` | `--force` | Session id capture not wired yet |
+| Grok Build | `grok` | `--always-approve` | Session id capture not wired yet |
 | Custom | Any executable | User configured | User configured |
 
 Hive does not install these CLIs for you. Install and authenticate them in the
@@ -178,13 +209,45 @@ same shell environment you use to start Hive.
 - Orchestrator and worker terminals backed by real PTYs.
 - Add Worker flow with role presets for coder, reviewer, tester, and fully
   custom prompts and commands — wire any CLI agent into the role you need.
+- Auto-staff (experimental, on by default): the Orchestrator can create
+  temporary coders, testers, and reviewers based on the task, and Hive cleans
+  them up after their dispatch reports back.
+- Workflows (experimental, off by default): the Orchestrator can run
+  multi-stage, multi-agent workflows while Hive shows runs, logs, results,
+  schedules, and stop controls in the Workflows panel.
+- Workflow CLI policy: choose the default CLI for workflow-created agents and
+  restrict which CLIs workflow scripts may launch.
+- Team memory: keep workspace constraints, long-running context, and team
+  decisions in Hive so later dispatches can carry the right background.
 - `.hive/tasks.md` editor with external-file conflict handling.
 - Background PTY preservation and best-effort native session resume.
-- Local SQLite metadata under `~/.config/hive` by default, or `$HIVE_DATA_DIR`
-  when set.
+- A What's New dialog after upgrades with curated release highlights.
+- Local SQLite metadata under `%APPDATA%\hive` on Windows and `~/.config/hive`
+  on macOS / Linux by default, or `$HIVE_DATA_DIR` when set.
 
-Hive does not provide sandboxing, multi-user auth, cloud hosting, or any
-bundled agent model. It coordinates the CLIs you already run locally.
+Hive does not provide sandboxing, multi-user auth, or any bundled agent model.
+It coordinates the CLIs you already run locally.
+
+## Remote Access (optional, off by default)
+
+If you want to reach your running Hive from your phone while you're away,
+enable optional **Remote access**. After the phone signs in and pairs with the
+desktop, it reaches the Hive Web UI through an end-to-end encrypted tunnel.
+A paired phone is a trusted device with the same authority as the local desktop
+browser.
+
+Important boundaries:
+
+- **Off by default.** If you never enable Remote access, Hive remains
+  local-first.
+- **A gateway is required.** Hive relays the phone-to-daemon connection through
+  a gateway; your machine connects outbound and does not require opening a
+  public port.
+- **Data and execution stay local.** The gateway routes authenticated
+  connections; it does not run your agents or store workspace contents.
+- **The desktop is the trust root.** New device pairing must be confirmed at
+  the computer. A paired phone cannot approve another device by itself, and
+  devices can be revoked at any time.
 
 ## Platform Support
 
@@ -192,7 +255,7 @@ bundled agent model. It coordinates the CLIs you already run locally.
 | --- | --- | --- |
 | macOS | Tier 1 | Main development and release verification target. |
 | Linux | Tier 1 | CI verified. Native folder picking expects `zenity`; manual path entry works without it. |
-| Windows | Tier 2 | CI runs a Windows test subset and a packaged-install smoke. Folder picking uses Windows PowerShell and the package includes `team.cmd`. Treat as best-effort — full Windows verification before each release is manual. |
+| Windows | Tier 2 | CI runs a Windows test subset and a packaged-install smoke. Folder picking uses the in-browser server filesystem browser and the package includes `team.cmd`. Treat as best-effort — full Windows verification before each release is manual. |
 
 All platforms require Node.js 22+. Hive depends on native packages
 (`node-pty` and `better-sqlite3`), so native install tooling may be required
@@ -202,8 +265,12 @@ when prebuilt binaries are unavailable.
 
 Hive is a local development tool, not a hosted service.
 
-- The runtime binds to `127.0.0.1`. Do not expose the Hive port through a public
-  tunnel, reverse proxy, or shared network interface.
+- When Remote access is off, the runtime binds to `127.0.0.1`. Do not expose
+  the Hive port through a public tunnel, reverse proxy, or shared network
+  interface.
+- When Remote access is on, paired phones have the same authority as the local
+  browser. Pair only devices you trust, and revoke or disable Remote access
+  when you no longer need it.
 - Built-in presets intentionally use each CLI's non-interactive or bypass mode
   where available. Treat workers as able to run arbitrary shell commands inside
   the selected workspace.
@@ -222,7 +289,7 @@ Read [SECURITY.md](SECURITY.md) before using Hive with sensitive repositories.
 
 | Data | Location |
 | --- | --- |
-| Runtime metadata | `~/.config/hive` or `$HIVE_DATA_DIR` |
+| Runtime metadata | Windows: `%APPDATA%\hive`; macOS / Linux: `~/.config/hive`; or `$HIVE_DATA_DIR` |
 | Workspace tasks | `<workspace>/.hive/tasks.md` |
 | Internal `team` command | Packaged under `dist/bin/`, injected into PTYs |
 | Web UI assets | Served by the runtime from the packaged `web/dist` build |
@@ -242,6 +309,26 @@ Start Hive with another local port:
 hive --port 4020
 ```
 
+**Version does not change after upgrading**
+
+Check the latest version on the official npm registry:
+
+```bash
+npm view @tt-a1i/hive version --registry=https://registry.npmjs.org
+```
+
+If you use a mirror or private npm registry, it may lag behind the official
+registry by minutes or hours. Upgrade directly from npmjs when you need the
+freshest release:
+
+```bash
+npm install -g @tt-a1i/hive@latest --registry=https://registry.npmjs.org
+```
+
+After upgrading, stop the old `hive` process and run `hive --version` again.
+If it still prints an older version, check `which hive` / `where hive`; PATH
+usually points at another global install.
+
 **Native package install fails**
 
 Hive depends on `node-pty` and `better-sqlite3`, which use native binaries. Use
@@ -253,14 +340,55 @@ ignore. The warning comes from `better-sqlite3`'s native binary download chain;
 it is an upstream installer maintenance notice, not a Hive install failure, and
 does not affect runtime behavior.
 
+When installation succeeds but npm prints warnings, use the source to decide:
+
+| warning | Source | What to do |
+| --- | --- | --- |
+| `allow-scripts @tt-a1i/hive` | Hive's postinstall fixes packaged native/PTY helper permissions. | Ignore after a successful install. |
+| `allow-scripts better-sqlite3` | SQLite native bindings download a prebuilt binary or build locally. | Ignore after success; check build tools if install fails. |
+| `allow-scripts node-pty` | Terminal PTY native bindings prepare the platform binary. | Ignore after success; check build tools if install fails. |
+| `allow-scripts esbuild` | esbuild verifies/selects the current platform binary. | Ignore after success. |
+
+This is npm 11's install-script review prompt. Today it is usually advisory;
+future npm versions may require explicit approval. To inspect pending scripts,
+run `npm approve-scripts --allow-scripts-pending`.
+
 **Folder picker does not open on Linux**
 
 Install `zenity`, or paste the workspace path manually.
 
-**Folder picker does not open on Windows**
+**Folder picker on Windows**
 
-Verify Windows PowerShell is available as `powershell.exe`, or paste the
-workspace path manually.
+Windows uses Hive's in-browser server filesystem browser when adding a
+workspace. It starts from "This PC" and lets you enter drives such as `C:\` or
+`D:\`. If the target folder is not listed, expand the advanced path entry and
+paste the absolute path.
+
+**`hive update` on Windows fails with `ENOENT mkdir ... C:\Program`**
+
+Older Hive versions could quote a global npm prefix with spaces incorrectly
+when running update. Upgrade manually:
+
+```powershell
+npm install -g @tt-a1i/hive@latest --registry=https://registry.npmjs.org
+```
+
+If your global npm directory is not on the default PATH, check the prefix:
+
+```powershell
+npm prefix -g
+where hive
+```
+
+Then confirm `where hive` points at the copy you just upgraded.
+
+**Codex terminal cannot scroll on Windows**
+
+Upgrade to `2.0.2` or newer and restart Hive. Codex is a full-screen TUI, so it
+usually will not show a browser-native scrollbar; Hive translates wheel,
+PageUp, and PageDown input into terminal input Codex understands. Version
+2.0.2 fixes saved Windows launch commands that still point at
+`node.exe ...\@openai\codex\bin\codex.js`.
 
 **Tasks file conflict banner appears**
 
@@ -301,49 +429,19 @@ node dist/src/cli/hive.js --port 4010
 The production server serves the built web UI directly. No Vite server is
 needed after `pnpm build`.
 
-## Release
+## Published Package
 
-Maintainer dry run:
-
-```bash
-pnpm release:dry
-```
-
-Tag pushes matching `v*` run the GitHub Actions release workflow. The workflow
-verifies macOS, Ubuntu, and Windows, then publishes to npm with `NPM_TOKEN`.
+User installs and upgrades should follow
+[`@tt-a1i/hive` on npm](https://www.npmjs.com/package/@tt-a1i/hive). The public
+changelog records already-shipped user-facing changes; you do not need to build
+from this repository just to use Hive.
 
 ## Status
 
-Hive is in alpha. The core flow is usable today; current work focuses on
-polishing the multi-agent collaboration workflow, Windows support, and clearer
-orchestration observability. Try it out and open issues — feedback shapes what
-gets prioritized next.
-
-## On the roadmap: cross-agent long-term memory
-
-<p align="center">
-  <a href="https://github.com/EverMind-AI/EverOS">
-    <img src="https://avatars.githubusercontent.com/EverMind-AI" width="72" alt="EverMind / EverOS" />
-  </a>
-</p>
-
-Single-agent memory already exists, but the styles diverge:
-
-- **Claude Code's [Auto Dream](https://claudefa.st/blog/guide/mechanics/auto-dream)** is **batch / offline** — invoked via `/dream` (or on a 24h timer), Claude consolidates JSONL session logs in the cloud, merges duplicates, extracts patterns, and proposes a new memory file for you to review and adopt. REM-sleep style, with a clean wake/sleep separation.
-- **Hermes Agent** runs the opposite playbook — **embedded and in-stride**. Every N turns it forks a background sub-agent to review the recent exchange and writes directly into a **multi-organ local store**: `MEMORY.md` (facts/rules) · `USER.md` (who-you-are) · SQLite + FTS5 (episodic search) · Honcho (third-person model) · `skills/` (procedural memory). The agent is allowed to edit its own skill files in stride — memory and capability are the same thing.
-
-But these are all **per-agent** memories. Hive coordinates *teams* of agents, so the next step is wiring them together: let the whole team **share one long-term memory store** — what Worker A learned today becomes context the Orchestrator can dispatch to Worker B tomorrow.
-
-We're planning to back this with **[EverOS](https://github.com/EverMind-AI/EverOS)**
-— an open-source long-term memory OS from [EverMind](https://evermind.ai/),
-currently SOTA on the LoCoMo / LongMemEval / HaluMem memory benchmarks.
-Its four-layer architecture (Agentic / Memory / Index / API+MCP) maps
-cleanly onto Hive's multi-PTY model: each agent keeps its in-CLI memory,
-team-level facts flow through EverOS, and the Orchestrator joins both
-when dispatching.
-
-Track progress at [#6](https://github.com/tt-a1i/hive/issues/6) — drop a
-+1 or comment with your use case to influence priority.
+Hive is in alpha. The current npm release includes multi-CLI agent presets,
+Auto-staff, Workflows, team memory, PWA installation, and optional Remote
+access. This public repository remains the stable source baseline; the latest
+user-facing capability is reflected by the npm package and this README.
 
 ## A different form factor: squad
 

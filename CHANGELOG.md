@@ -2,6 +2,93 @@
 
 All notable user-facing changes will be documented in this file.
 
+## 2.0.2 - 2026-06-10
+
+Windows Codex terminal scrolling fix.
+
+- Fixes Codex terminal scrolling for Windows installs whose saved launch
+  command still points at `node.exe ...\@openai\codex\bin\codex.js`, so Hive
+  now applies the Codex-specific wheel/PageUp/PageDown input profile instead of
+  treating the session like a plain shell.
+
+## 2.0.1 - 2026-06-09
+
+Team memory, worker-card polish, and release-channel cleanup.
+
+- Adds ambient team memory so Hive can retain useful workspace context and
+  surface it again when you need the team to remember prior decisions,
+  constraints, or project notes.
+- Refines the Memory and Workflows drawers with better desktop/mobile layouts,
+  clearer tabs, and a search field that stays out of the way on wide screens.
+- Redesigns worker cards for stronger scanability: clearer status treatment,
+  higher contrast, cleaner role text, and an in-place rename flow instead of a
+  separate edit dialog.
+- Clarifies pending dispatch status so queued or waiting worker activity is
+  easier to understand while the Orchestrator is coordinating work.
+- Publishes the current remote/mobile build under the original official
+  `@tt-a1i/hive` package name.
+
+## 2.0.0 - 2026-06-07
+
+Remote access and mobile control.
+
+- Adds optional Remote access so you can open your running Hive from a phone
+  browser. Remote is off by default; when enabled, the phone connects through
+  an end-to-end encrypted tunnel and gets the same authority as the local
+  desktop browser.
+- Adds the desktop trust-root pairing flow. The desktop creates a short-lived
+  pairing code, the phone enters it after selecting the machine, both sides
+  show a 6-digit verification code, and the device is stored only after desktop
+  confirmation.
+- Adds remote device management: list paired devices, revoke them from
+  Settings or the CLI, drop live sessions from the Settings panel, and review
+  an audit trail of remote requests and denials.
+- Adds `hive remote login`, `status`, `logout`, `devices`, and `revoke` for
+  linking the machine to a gateway account and managing paired devices from the
+  host itself.
+- Adds the mobile Hive shell: sign-in/connect screens, machine list, bottom
+  navigation, workspace switching, full-screen team/task panels, and
+  remote-aware reconnect and update prompts.
+- Makes phone terminals writable through the terminal itself. Worker terminals
+  can be opened full-screen, mobile focus mode hides surrounding chrome while
+  you work, and terminal touch scrolling tracks the finger more closely.
+- Preserves local-first behavior: local `127.0.0.1` Hive keeps working without
+  Remote access, and paired phones cannot approve new devices or turn Remote
+  access back on after it has been disabled.
+
+## 1.7.0 - 2026-06-05
+
+Hermes joins the roster.
+
+- Adds Hermes as a fifth built-in CLI agent preset alongside Claude Code,
+  Codex, OpenCode, and Gemini: available as an Orchestrator or Worker, in
+  `team spawn --cli hermes`, and in the workflow CLI allowlist.
+- Hermes runs YOLO via `--yolo` and resumes sessions via
+  `--resume <session_id>` when the Hermes CLI is installed and authenticated.
+- Existing installs pick the preset up automatically; no manual setup is
+  needed beyond having `hermes` on your `PATH`.
+
+## 1.6.0 - 2026-06-02
+
+Orchestrator controls, worker visibility, and protocol-trust fixes.
+
+- Adds a Stop control to the running Orchestrator pane so a runaway
+  Orchestrator can be halted from the UI.
+- Surfaces per-worker queue depth and a latest-activity line on worker cards,
+  with clearer status copy for queued or active work.
+- Redelivers worker reports the Orchestrator missed: a report is queued and
+  delivered on the next report or `team list` instead of being lost when the
+  Orchestrator is down or restarting.
+- Stops injecting crash-recovery handover after a deliberate Stop and Restart,
+  so the Orchestrator is not handed stale open tasks it was meant to drop.
+- Adds an outbound completion webhook setting: Hive POSTs a small JSON payload
+  to a URL you choose when a worker reports or a workflow finishes.
+- Adds opt-in structured output to workflow `agent()` via `outputSchema`, so
+  fan-out/verify scripts receive a parsed object instead of parsing free text.
+- Adds `team next`: tasks in `.hive/tasks.md` can carry an optional
+  `[needs: #2]` dependency, and `team next` returns the tasks that are
+  unblocked now.
+
 ## 1.5.0 - 2026-05-31
 
 Workflow runtime, experimental team automation, and Codex reliability.
